@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: nevernight-server
+    runtime: node
+    plan: free
+    buildCommand: npm install
+    startCommand: node server.js
+    envVars:
+      - key: NODE_VERSION
+        value: "20"
+      - key: TG_TOKEN
+        sync: false
+      - key: TG_CHAT_ID
+        sync: false
+    healthCheckPath: /health

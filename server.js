@@ -63,8 +63,17 @@ const io = new Server(server);
 app.set('trust proxy', true);
 app.use(express.json({ limit: '10kb' }));
 
-// Статика: всё портфолио (index.html + demos/)
-app.use(express.static(ROOT));
+// Главная — хаб со ссылками на все сервисы (работает и на хостинге)
+app.get('/', (_req, res) =>
+  res.sendFile(path.join(__dirname, 'pages', 'hub.html')));
+
+// Health-check для хостинга / мониторинга
+app.get('/health', (_req, res) => res.json({ ok: true, uptime: process.uptime() }));
+
+// Статика: портфолио лежит в родительской папке (при деплое сервера её может не быть)
+if (fs.existsSync(ROOT)) {
+  app.use(express.static(ROOT));
+}
 
 // Мелкая защита от спама в API
 const rate = new Map();
