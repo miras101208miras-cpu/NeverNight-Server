@@ -35,7 +35,7 @@
       background: radial-gradient(circle, rgba(168, 85, 247, 0.14), rgba(0, 240, 255, 0.08), transparent 70%);
       filter: blur(90px);
     }
-    .topbar { width: 100%; max-width: 900px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 36px; gap: 12px; flex-wrap: wrap; }
+    .topbar { width: 100%; max-width: 980px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 36px; gap: 12px; flex-wrap: wrap; }
     .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: #fff; }
     .brand-logo {
       width: 38px; height: 38px; border-radius: 10px;
@@ -54,7 +54,7 @@
     }
     .back-btn:hover { background: rgba(0, 240, 255, 0.12); box-shadow: 0 0 15px rgba(0, 240, 255, 0.4); }
 
-    .wrap { width: 100%; max-width: 900px; }
+    .wrap { width: 100%; max-width: 980px; }
     .tag { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--purple); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 12px; }
     h1 { font-family: 'Syne', sans-serif; font-size: clamp(2rem, 5.5vw, 3rem); font-weight: 800; margin-bottom: 10px; }
     h1 span { background: linear-gradient(135deg, var(--purple), var(--cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
@@ -62,16 +62,37 @@
 
     .stats-row { display: flex; gap: 14px; margin-bottom: 30px; flex-wrap: wrap; }
     .stat-card {
-      flex: 1; min-width: 140px;
+      flex: 1; min-width: 130px;
       background: var(--card); border: 1px solid var(--border); border-radius: 16px;
       padding: 20px; backdrop-filter: blur(16px); text-align: center;
       box-shadow: 0 15px 40px rgba(0,0,0,0.5);
     }
-    .stat-num { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 2.2rem; background: linear-gradient(135deg, var(--purple), var(--cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .stat-lbl { font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-top: 4px; }
+    .stat-num { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 2.1rem; background: linear-gradient(135deg, var(--purple), var(--cyan)); -webkit-background-clip:text; -webkit-text-fill-color: transparent; }
+    .stat-lbl { font-family: 'JetBrains Mono', monospace; font-size: 0.6rem; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-top: 4px; }
 
     .section-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.4rem; margin: 30px 0 16px; display: flex; align-items: center; gap: 10px; }
     .count-badge { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.4); color: var(--purple); padding: 3px 10px; border-radius: 12px; }
+
+    .panel {
+      background: var(--card); border: 1px solid var(--border); border-radius: 18px;
+      padding: 20px; backdrop-filter: blur(16px); box-shadow: 0 15px 40px rgba(0,0,0,0.5);
+    }
+    .legend { display: flex; gap: 18px; flex-wrap: wrap; margin-bottom: 12px; font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--muted); }
+    .legend span { display: flex; align-items: center; gap: 6px; }
+    .dot { width: 10px; height: 10px; border-radius: 3px; display: inline-block; }
+    #activityChart { width: 100%; height: 220px; display: block; }
+
+    .chat-head { display: flex; gap: 12px; align-items: center; margin-bottom: 14px; flex-wrap: wrap; }
+    .chat-head select {
+      background: rgba(255,255,255,0.04); border: 1px solid var(--border); color: #f8fafc;
+      border-radius: 10px; padding: 8px 12px; font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;
+    }
+    .online-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 14px; min-height: 30px; align-items: center; }
+    .online-chip {
+      font-family: 'JetBrains Mono', monospace; font-size: 0.72rem;
+      background: rgba(255,255,255,0.04); border: 1px solid var(--border);
+      padding: 4px 10px; border-radius: 12px;
+    }
 
     .items { display: flex; flex-direction: column; gap: 10px; }
     .item {
@@ -90,6 +111,7 @@
     .item-body { flex: 1; min-width: 0; }
     .item-text { font-size: 0.92rem; line-height: 1.5; margin-bottom: 6px; word-break: break-word; }
     .item-meta { font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; color: #64748b; }
+    .nick { font-weight: 800; }
     .del-btn {
       background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.3);
       color: var(--red); border-radius: 8px; padding: 6px 11px; cursor: pointer;
@@ -97,6 +119,34 @@
     }
     .del-btn:hover { background: rgba(239, 68, 68, 0.22); box-shadow: 0 0 10px rgba(239, 68, 68, 0.4); }
     .empty { text-align: center; color: #64748b; padding: 26px; font-size: 0.85rem; border: 1px dashed var(--border); border-radius: 12px; }
+
+    /* Экран входа */
+    .lock {
+      position: fixed; inset: 0; z-index: 50; display: none;
+      align-items: center; justify-content: center; padding: 20px;
+      background: rgba(4, 6, 10, 0.85); backdrop-filter: blur(8px);
+    }
+    .lock-box {
+      width: 100%; max-width: 360px; text-align: center;
+      background: var(--card); border: 1px solid rgba(168, 85, 247, 0.4);
+      border-radius: 20px; padding: 34px 28px; box-shadow: 0 20px 60px rgba(0,0,0,0.7), 0 0 30px rgba(168,85,247,0.2);
+    }
+    .lock-icon { font-size: 2.4rem; margin-bottom: 12px; }
+    .lock h2 { font-family: 'Syne', sans-serif; font-size: 1.5rem; margin-bottom: 6px; }
+    .lock p { color: var(--muted); font-size: 0.82rem; margin-bottom: 20px; }
+    .lock input {
+      width: 100%; padding: 13px 16px; border-radius: 12px; margin-bottom: 12px;
+      background: rgba(255,255,255,0.05); border: 1px solid var(--border); color: #f8fafc;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.9rem; text-align: center; outline: none;
+    }
+    .lock input:focus { border-color: rgba(0, 240, 255, 0.5); box-shadow: 0 0 15px rgba(0,240,255,0.25); }
+    .lock-err { color: var(--red); font-size: 0.78rem; min-height: 18px; margin-bottom: 8px; font-family: 'JetBrains Mono', monospace; }
+    .lock-btn {
+      width: 100%; padding: 13px; border: none; border-radius: 12px; cursor: pointer;
+      background: linear-gradient(135deg, var(--cyan), var(--purple)); color: #04060a;
+      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1rem; transition: transform 0.2s, box-shadow 0.2s;
+    }
+    .lock-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,240,255,0.35); }
   </style>
 </head>
 <body>
@@ -110,28 +160,42 @@
     <div class="nav-links">
       <a href="/wall" target="_blank" class="back-btn">📝 СТЕНА ИДЕЙ</a>
       <a href="/guestbook" target="_blank" class="back-btn">📖 ГОСТЕВАЯ</a>
-      <a href="/" class="back-btn">← ПОРТФОЛИО</a>
+      <a href="/chat" target="_blank" class="back-btn">💬 ЧАТ</a>
+      <a href="/" class="back-btn">← НА ХАБ</a>
     </div>
   </div>
 
   <div class="wrap">
     <div class="tag">// Панель управления EcosystemNever</div>
     <h1>Админ<span>панель Never</span></h1>
-    <p class="sub">Все идеи со Стены и записи гостевой книги в одном месте. Новые появляются автоматически.</p>
+    <p class="sub">Идеи, гостевая книга, чат и живая статистика экосистемы в одном месте.</p>
 
     <div class="stats-row">
-      <div class="stat-card">
-        <div class="stat-num" id="ideasCount">0</div>
-        <div class="stat-lbl">Идей всего</div>
+      <div class="stat-card"><div class="stat-num" id="ideasCount">0</div><div class="stat-lbl">Идей всего</div></div>
+      <div class="stat-card"><div class="stat-num" id="votesCount">0</div><div class="stat-lbl">Голосов</div></div>
+      <div class="stat-card"><div class="stat-num" id="gbCount">0</div><div class="stat-lbl">Записей в книге</div></div>
+      <div class="stat-card"><div class="stat-num" id="chatCount">0</div><div class="stat-lbl">Сообщений чата</div></div>
+    </div>
+
+    <div class="section-title">📊 Активность за 14 дней</div>
+    <div class="panel">
+      <div class="legend">
+        <span><i class="dot" style="background:#00f0ff"></i> Идеи</span>
+        <span><i class="dot" style="background:#a855f7"></i> Гостевая книга</span>
+        <span><i class="dot" style="background:#10b981"></i> Сообщения чата</span>
       </div>
-      <div class="stat-card">
-        <div class="stat-num" id="votesCount">0</div>
-        <div class="stat-lbl">Голосов</div>
+      <canvas id="activityChart"></canvas>
+    </div>
+
+    <div class="section-title">💬 Модерация чата</div>
+    <div class="panel">
+      <div class="chat-head">
+        <span class="item-meta">Комната:</span>
+        <select id="roomSel"></select>
+        <span class="item-meta" id="onlineCount"></span>
       </div>
-      <div class="stat-card">
-        <div class="stat-num" id="gbCount">0</div>
-        <div class="stat-lbl">Записей в книге</div>
-      </div>
+      <div class="online-row" id="chatOnline"></div>
+      <div class="items" id="chatMsgs"><div class="empty">Загрузка...</div></div>
     </div>
 
     <div class="section-title">💡 Идеи <span class="count-badge" id="ideasBadge">0</span></div>
@@ -141,106 +205,202 @@
     <div class="items" id="guestbook"><div class="empty">Загрузка...</div></div>
   </div>
 
-<script>
-  const ideasEl = document.getElementById('ideas');
-  const gbEl = document.getElementById('guestbook');
+  <!-- Экран входа по паролю -->
+  <div class="lock" id="lock">
+    <div class="lock-box">
+      <div class="lock-icon">🔐</div>
+      <h2>Вход в админку</h2>
+      <p>Введите пароль, чтобы управлять сервисами EcosystemNever</p>
+      <form id="lockForm">
+        <input type="password" id="lockPass" placeholder="Пароль" autocomplete="off">
+        <div class="lock-err" id="lockErr"></div>
+        <button type="submit" class="lock-btn">Войти →</button>
+      </form>
+    </div>
+  </div>
 
+<script>
+  const $ = (id) => document.getElementById(id);
+  const escapeHtml = (s) => String(s).replace(/[&<>"']/g, (c) =>
+    ({ '&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;' }[c]));
+
+  let PASS = sessionStorage.getItem('nn_admin_pass') || '';
+  let curRoom = 'main';
+
+  function showLock() { $('lock').style.display = 'flex'; $('lockPass').focus(); }
+  function hideLock() { $('lock').style.display = 'none'; }
+
+  async function tryAuth(pass) {
+    const r = await fetch('/api/admin/auth', { headers: { 'x-admin-pass': pass } });
+    return r.ok;
+  }
+
+  async function api(path, opts = {}) {
+    const r = await fetch(path, { ...opts, headers: { 'x-admin-pass': PASS, ...(opts.headers || {}) } });
+    if (r.status === 401) { showLock(); throw new Error('401'); }
+    return r;
+  }
+
+  $('lockForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const v = $('lockPass').value;
+    if (await tryAuth(v)) {
+      PASS = v; sessionStorage.setItem('nn_admin_pass', v);
+      $('lockErr').textContent = ''; hideLock(); loadAll();
+    } else {
+      $('lockErr').textContent = '❌ Неверный пароль';
+    }
+  });
+
+  // ---------- Идеи и гостевая книга ----------
   function fmt(ts) {
     return new Date(ts).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
   }
 
   function ideaNode(e) {
-    const div = document.createElement('div');
-    div.className = 'item';
-
-    const chip = document.createElement('div');
-    chip.className = 'votes-chip';
-    chip.innerHTML = '<span>' + e.votes + '</span><small>ГОСОСА</small>'.replace('ГОСОСА', 'ГОЛОСА');
-
-    const body = document.createElement('div');
-    body.className = 'item-body';
-    const text = document.createElement('div');
-    text.className = 'item-text';
-    text.textContent = e.text;
-    const meta = document.createElement('div');
-    meta.className = 'item-meta';
+    const div = document.createElement('div'); div.className = 'item';
+    const chip = document.createElement('div'); chip.className = 'votes-chip';
+    chip.innerHTML = '<span>' + e.votes + '</span><small>ГОЛОСА</small>';
+    const body = document.createElement('div'); body.className = 'item-body';
+    const text = document.createElement('div'); text.className = 'item-text'; text.textContent = e.text;
+    const meta = document.createElement('div'); meta.className = 'item-meta';
     meta.textContent = '#' + e.id + ' · ' + e.author + ' · ' + fmt(e.ts);
     body.append(text, meta);
-
-    const del = document.createElement('button');
-    del.className = 'del-btn';
-    del.textContent = '✕ Удалить';
+    const del = document.createElement('button'); del.className = 'del-btn'; del.textContent = '✕ Удалить';
     del.onclick = async () => {
       if (!confirm('Удалить идею #' + e.id + '?')) return;
-      await fetch('/api/admin/idea/' + e.id, { method: 'DELETE' });
-      div.remove();
-      recalc();
+      await api('/api/admin/idea/' + e.id, { method: 'DELETE' });
+      div.remove(); recalc();
     };
-
-    div.append(chip, body, del);
-    return div;
+    div.append(chip, body, del); return div;
   }
 
   function gbNode(e) {
-    const div = document.createElement('div');
-    div.className = 'item';
-
-    const body = document.createElement('div');
-    body.className = 'item-body';
-    const text = document.createElement('div');
-    text.className = 'item-text';
-    text.textContent = '«' + e.text + '»';
-    const meta = document.createElement('div');
-    meta.className = 'item-meta';
+    const div = document.createElement('div'); div.className = 'item';
+    const body = document.createElement('div'); body.className = 'item-body';
+    const text = document.createElement('div'); text.className = 'item-text'; text.textContent = '«' + e.text + '»';
+    const meta = document.createElement('div'); meta.className = 'item-meta';
     meta.textContent = '#' + e.id + ' · ' + e.name + ' · ' + fmt(e.ts);
     body.append(text, meta);
-
-    const del = document.createElement('button');
-    del.className = 'del-btn';
-    del.textContent = '✕ Удалить';
+    const del = document.createElement('button'); del.className = 'del-btn'; del.textContent = '✕ Удалить';
     del.onclick = async () => {
       if (!confirm('Удалить запись #' + e.id + '?')) return;
-      await fetch('/api/admin/guestbook/' + e.id, { method: 'DELETE' });
-      div.remove();
-      recalc();
+      await api('/api/admin/guestbook/' + e.id, { method: 'DELETE' });
+      div.remove(); recalc();
     };
-
-    div.append(body, del);
-    return div;
+    div.append(body, del); return div;
   }
 
   function recalc() {
-    const ideas = ideasEl.querySelectorAll('.item').length;
-    const gb = gbEl.querySelectorAll('.item').length;
-    document.getElementById('ideasCount').textContent = ideas;
-    document.getElementById('gbCount').textContent = gb;
-    document.getElementById('ideasBadge').textContent = ideas;
-    document.getElementById('gbBadge').textContent = gb;
+    const ideas = $('ideas').querySelectorAll('.item').length;
+    const gb = $('guestbook').querySelectorAll('.item').length;
+    $('ideasCount').textContent = ideas;
+    $('gbCount').textContent = gb;
+    $('ideasBadge').textContent = ideas;
+    $('gbBadge').textContent = gb;
     let votes = 0;
-    ideasEl.querySelectorAll('.votes-chip span').forEach((s) => votes += Number(s.textContent) || 0);
-    document.getElementById('votesCount').textContent = votes;
+    $('ideas').querySelectorAll('.votes-chip span').forEach((s) => votes += Number(s.textContent) || 0);
+    $('votesCount').textContent = votes;
   }
 
-  async function load() {
-    try {
-      const r = await fetch('/api/admin/all');
-      const data = await r.json();
+  async function loadMain() {
+    const data = await (await api('/api/admin/all')).json();
+    $('ideas').innerHTML = data.ideas.length ? '' : '<div class="empty">Идей пока нет</div>';
+    data.ideas.forEach((e) => $('ideas').appendChild(ideaNode(e)));
+    $('guestbook').innerHTML = data.guestbook.length ? '' : '<div class="empty">Записей пока нет</div>';
+    data.guestbook.forEach((e) => $('guestbook').appendChild(gbNode(e)));
+    $('chatCount').textContent = data.chatCount || 0;
+    recalc();
+  }
 
-      ideasEl.innerHTML = data.ideas.length ? '' : '<div class="empty">Идей пока нет</div>';
-      data.ideas.forEach((e) => ideasEl.appendChild(ideaNode(e)));
-
-      gbEl.innerHTML = data.guestbook.length ? '' : '<div class="empty">Записей пока нет</div>';
-      data.guestbook.forEach((e) => gbEl.appendChild(gbNode(e)));
-
-      recalc();
-    } catch {
-      ideasEl.innerHTML = '<div class="empty">⚠ Сервер офлайн</div>';
-      gbEl.innerHTML = '<div class="empty">⚠ Сервер офлайн</div>';
+  // ---------- График активности ----------
+  function drawChart(data) {
+    const canvas = $('activityChart');
+    const dpr = window.devicePixelRatio || 1;
+    const cssW = canvas.clientWidth || 800, cssH = 220;
+    canvas.width = cssW * dpr; canvas.height = cssH * dpr;
+    const ctx = canvas.getContext('2d'); ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, cssW, cssH);
+    const padL = 34, padB = 26, padT = 12, padR = 8;
+    const W = cssW - padL - padR, H = cssH - padT - padB;
+    const max = Math.max(1, ...data.map((d) => d.ideas + d.guestbook + d.chat));
+    const n = data.length, gap = 6;
+    const barW = Math.max(6, (W - gap * (n - 1)) / n);
+    ctx.font = '10px "JetBrains Mono", monospace';
+    const steps = 4;
+    for (let s = 0; s <= steps; s++) {
+      const y = padT + H - H * s / steps;
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)';
+      ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(cssW - padR, y); ctx.stroke();
+      ctx.fillStyle = '#64748b'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle';
+      ctx.fillText(Math.round(max * s / steps), padL - 6, y);
     }
+    data.forEach((d, i) => {
+      const x = padL + i * (barW + gap); let y = padT + H;
+      const seg = (v, color) => { if (!v) return; const h = H * v / max; y -= h; ctx.fillStyle = color; ctx.fillRect(x, y, barW, h); };
+      seg(d.chat, '#10b981'); seg(d.guestbook, '#a855f7'); seg(d.ideas, '#00f0ff');
+      if (i % 2 === 0) { ctx.fillStyle = '#64748b'; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(d.day.slice(5), x + barW / 2, padT + H + 6); }
+    });
   }
 
-  load();
-  setInterval(load, 15000);
+  async function loadActivity() {
+    const data = await (await api('/api/admin/activity')).json();
+    drawChart(data);
+  }
+  window.addEventListener('resize', loadActivity);
+
+  // ---------- Модерация чата ----------
+  function chatNode(m) {
+    const div = document.createElement('div'); div.className = 'item';
+    const body = document.createElement('div'); body.className = 'item-body';
+    const text = document.createElement('div'); text.className = 'item-text';
+    const nick = document.createElement('span'); nick.className = 'nick'; nick.style.color = m.color; nick.textContent = m.nick + ': ';
+    text.append(nick, document.createTextNode(m.text));
+    const meta = document.createElement('div'); meta.className = 'item-meta';
+    meta.textContent = '#' + m.id + ' · ' + fmt(m.ts);
+    body.append(text, meta);
+    const del = document.createElement('button'); del.className = 'del-btn'; del.textContent = '✕ Удалить';
+    del.onclick = async () => {
+      if (!confirm('Удалить сообщение #' + m.id + '?')) return;
+      await api('/api/admin/chat/' + m.id, { method: 'DELETE' });
+      div.remove();
+    };
+    div.append(body, del); return div;
+  }
+
+  async function loadChatRooms() {
+    const rooms = await (await api('/api/admin/rooms')).json();
+    if (!rooms.includes(curRoom)) curRoom = rooms[0] || 'main';
+    $('roomSel').innerHTML = rooms.map((r) => '<option' + (r === curRoom ? ' selected' : '') + '>' + escapeHtml(r) + '</option>').join('');
+  }
+
+  async function loadChatMsgs() {
+    const rows = await (await api('/api/admin/chat?room=' + encodeURIComponent(curRoom))).json();
+    $('chatMsgs').innerHTML = rows.length ? '' : '<div class="empty">Сообщений пока нет</div>';
+    rows.forEach((m) => $('chatMsgs').appendChild(chatNode(m)));
+  }
+
+  async function loadOnline() {
+    const map = await (await api('/api/admin/online')).json();
+    const people = map[curRoom] || [];
+    $('onlineCount').textContent = people.length ? 'онлайн: ' + people.length : '';
+    $('chatOnline').innerHTML = people.length
+      ? people.map((p) => '<span class="online-chip" style="color:' + (p.color || '#00f0ff') + '">● ' + escapeHtml(p.nick) + '</span>').join('')
+      : '<div class="empty">Сейчас никого в комнате</div>';
+  }
+
+  $('roomSel').addEventListener('change', (e) => { curRoom = e.target.value; loadChatMsgs(); loadOnline(); });
+
+  async function loadChat() { await loadChatRooms(); await Promise.all([loadChatMsgs(), loadOnline()]); }
+  async function loadAll() { try { await Promise.all([loadMain(), loadActivity(), loadChat()]); } catch (e) { if (e.message !== '401') console.error(e); } }
+
+  (async function init() {
+    if (PASS && await tryAuth(PASS)) { hideLock(); loadAll(); }
+    else { PASS = ''; showLock(); }
+  })();
+
+  setInterval(() => { if (PASS && $('lock').style.display !== 'flex') loadMain().catch(() => {}); }, 15000);
+  setInterval(() => { if (PASS && $('lock').style.display !== 'flex') loadOnline().catch(() => {}); }, 5000);
 </script>
 </body>
 </html>

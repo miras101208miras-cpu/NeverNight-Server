@@ -114,6 +114,23 @@ async function notifyTelegram(text) {
 }
 
 // ============================================================
+//  Защита админ-панели паролем
+//  Пароль: ADMIN_PASSWORD (env) или secret.json.adminPassword
+// ============================================================
+const ADMIN_PASSWORD = process.env.ADMIN_PASSWORD || (secret && secret.adminPassword) || 'nevernight';
+function requireAdmin(req, res, next) {
+  const pass = req.get('x-admin-pass') || req.query.pass || '';
+  if (String(pass) !== String(ADMIN_PASSWORD)) {
+    return res.status(401).json({ error: 'Неверный пароль' });
+  }
+  next();
+}
+function dayKey(ts) {
+  const d = new Date(ts);
+  return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0');
+}
+
+// ============================================================
 //  NeverGuestbook — гостевая книга
 // ============================================================
 app.get('/guestbook', (_req, res) =>
@@ -191,20 +208,42 @@ app.post('/api/wall/:id/vote', (req, res) => {
 app.get('/admin', (_req, res) =>
   res.sendFile(path.join(__dirname, 'pages', 'admin.html')));
 
-app.get('/api/admin/all', (_req, res) => {
+app.get('/api/admin/all', requireAdmin, (_req, res) => {
   const ideas = db.prepare('SELECT id, text, author, votes, ts FROM ideas ORDER BY ts DESC').all();
   const guestbook = db.prepare('SELECT id, name, text, ts FROM guestbook ORDER BY ts DESC').all();
-  res.json({ ideas, guestbook });
+  const chatCount = db.prepare('SELECT COUNT(*) AS c FROM chat').get().c;
+  res.json({ ideas, guestbook, chatCount });
 });
 
-app.delete('/api/admin/idea/:id', (req, res) => {
+// Проверка пароля (для формы входа в админку)
+app.get('/api/admin/auth', requireAdmin, (_req, res) => res.json({ ok: true }));
+
+// График активности за 14 дней (идеи / гостевая / чат по дням)
+app.get('/api/admin/activity', requireAdmin, (_req, res) => {
+  const days = 14;
+  const now = Date.now();
+  const since = now - (days - 1) * 86400000;
+  const map = {};
+  for (let i = days - 1; i >= 0; i--) {
+    const key = dayKey(now - i * 86400000);
+    map[key] = { day: key, ideas: 0, guestbook: 0, chat: 0 };
+  }
+  const add = (table, field) => {
+    db.prepare(`SELECT ts FROM ${table} WHERE ts >= ?`).all(since)
+      .forEach((r) => { const k = dayKey(r.ts); if (map[k]) map[k][field]++; });
+  };
+  add('ideas', 'ideas'); add('guestbook', 'guestbook'); add('chat', 'chat');
+  res.json(Object.values(map));
+});
+
+app.delete('/api/admin/idea/:id', requireAdmin, (req, res) => {
   const id = Number(req.params.id);
   db.prepare('DELETE FROM idea_votes WHERE idea_id = ?').run(id);
   db.prepare('DELETE FROM ideas WHERE id = ?').run(id);
   res.json({ ok: true });
 });
 
-app.delete('/api/admin/guestbook/:id', (req, res) => {
+app.delete('/api/admin/guestbook/:id', requireAdmin, (req, res) => {
   const id = Number(req.params.id);
   db.prepare('DELETE FROM guestbook WHERE id = ?').run(id);
   res.json({ ok: true });
@@ -307,6 +346,35 @@ io.on('connection', (socket) => {
       io.to(room).emit('system', { text: `${me.nick} вышел(ла)`, ts: Date.now() });
     }
   });
+});
+
+// ============================================================
+//  Модерация чата в админке (комнаты, сообщения, кто онлайн)
+// ============================================================
+app.get('/api/admin/rooms', requireAdmin, (_req, res) => {
+  const rows = db.prepare('SELECT DISTINCT room FROM chat ORDER BY room').all();
+  const online = [...rooms.keys()];
+  const all = new Set([...rows.map((r) => r.room), ...online, 'main']);
+  res.json([...all]);
+});
+
+app.get('/api/admin/chat', requireAdmin, (req, res) => {
+  const room = clean(req.query.room, 24) || 'main';
+  const rows = db.prepare(
+    'SELECT id, room, nick, color, text, ts FROM chat WHERE room = ? ORDER BY id DESC LIMIT 100'
+  ).all(room);
+  res.json(rows);
+});
+
+app.get('/api/admin/online', requireAdmin, (_req, res) => {
+  const out = {};
+  for (const [room, m] of rooms) out[room] = [...m.values()];
+  res.json(out);
+});
+
+app.delete('/api/admin/chat/:id', requireAdmin, (req, res) => {
+  db.prepare('DELETE FROM chat WHERE id = ?').run(Number(req.params.id));
+  res.json({ ok: true });
 });
 
 // ---------- Запуск ----------
