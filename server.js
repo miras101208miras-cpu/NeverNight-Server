@@ -281,13 +281,19 @@ app.get('/about', (_req, res) =>
 // ============================================================
 //  NeverPing — мониторинг сервисов экосистемы
 // ============================================================
+const SELF_URL = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
 const TARGETS = [
-  { name: 'EcosystemNever',        url: 'https://miras101208miras-cpu.github.io/EcosystemNever/' },
-  { name: 'NeverProduct: DS',      url: 'https://miras101208miras-cpu.github.io/NeverProduct-Demon-Slayer/' },
-  { name: 'NeverParty',            url: 'https://miras101208miras-cpu.github.io/EcosystemNever/party/index.html' },
-  { name: 'Telegram-бот',          url: 'https://t.me/ecosystem_never_bot' },
-  { name: 'GitHub',                url: 'https://github.com/miras101208miras-cpu' },
-  { name: 'NeverNight (локально)', url: `http://localhost:${PORT}/` }
+  { name: 'EcosystemNever',   url: 'https://miras101208miras-cpu.github.io/EcosystemNever/' },
+  { name: 'Портфолио',        url: 'https://miras101208miras-cpu.github.io/NeverNight-Portfolio/' },
+  { name: 'NeverProduct: DS', url: 'https://miras101208miras-cpu.github.io/NeverProduct-Demon-Slayer/' },
+  { name: 'NeverParty',       url: 'https://miras101208miras-cpu.github.io/EcosystemNever/party/index.html' },
+  { name: 'NeverChat',        url: `${SELF_URL}/chat` },
+  { name: 'NeverWall',        url: `${SELF_URL}/wall` },
+  { name: 'NeverGuestbook',   url: `${SELF_URL}/guestbook` },
+  { name: 'NeverProjects',    url: `${SELF_URL}/projects` },
+  { name: 'NeverStats',       url: `${SELF_URL}/stats` },
+  { name: 'Telegram-бот',     url: 'https://t.me/ecosystem_never_bot' },
+  { name: 'GitHub',           url: 'https://github.com/miras101208miras-cpu' }
 ];
 let lastCheck = [];
 
