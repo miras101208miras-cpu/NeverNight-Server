@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NeverAdmin — Панель управления EcosystemNever</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Montserrat:wght@600;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #04060a;
+      --card: rgba(16, 23, 38, 0.7);
+      --border: rgba(255, 255, 255, 0.08);
+      --cyan: #00f0ff;
+      --purple: #a855f7;
+      --green: #10b981;
+      --red: #ef4444;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg); color: #f8fafc;
+      font-family: 'Montserrat', sans-serif;
+      min-height: 100vh; padding: 24px;
+      display: flex; flex-direction: column; align-items: center;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+      background-size: 50px 50px;
+    }
+    .glow {
+      position: fixed; top: -20%; left: 50%; transform: translateX(-50%);
+      width: 70vw; height: 50vh; z-index: -1; pointer-events: none;
+      background: radial-gradient(circle, rgba(168, 85, 247, 0.14), rgba(0, 240, 255, 0.08), transparent 70%);
+      filter: blur(90px);
+    }
+    .topbar { width: 100%; max-width: 900px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 36px; gap: 12px; flex-wrap: wrap; }
+    .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: #fff; }
+    .brand-logo {
+      width: 38px; height: 38px; border-radius: 10px;
+      background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.45);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; box-shadow: 0 0 15px rgba(168, 85, 247, 0.35);
+    }
+    .brand-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.05rem; }
+    .brand-title span { color: var(--purple); }
+    .nav-links { display: flex; gap: 10px; flex-wrap: wrap; }
+    .back-btn {
+      padding: 9px 18px; border-radius: 20px; text-decoration: none;
+      color: var(--cyan); border: 1px solid rgba(0, 240, 255, 0.35);
+      font-size: 0.72rem; font-weight: 700; letter-spacing: 1px; transition: all 0.3s;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .back-btn:hover { background: rgba(0, 240, 255, 0.12); box-shadow: 0 0 15px rgba(0, 240, 255, 0.4); }
+
+    .wrap { width: 100%; max-width: 900px; }
+    .tag { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--purple); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 12px; }
+    h1 { font-family: 'Syne', sans-serif; font-size: clamp(2rem, 5.5vw, 3rem); font-weight: 800; margin-bottom: 10px; }
+    h1 span { background: linear-gradient(135deg, var(--purple), var(--cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .sub { color: var(--muted); margin-bottom: 30px; font-size: 0.95rem; }
+
+    .stats-row { display: flex; gap: 14px; margin-bottom: 30px; flex-wrap: wrap; }
+    .stat-card {
+      flex: 1; min-width: 140px;
+      background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+      padding: 20px; backdrop-filter: blur(16px); text-align: center;
+      box-shadow: 0 15px 40px rgba(0,0,0,0.5);
+    }
+    .stat-num { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 2.2rem; background: linear-gradient(135deg, var(--purple), var(--cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .stat-lbl { font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-top: 4px; }
+
+    .section-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.4rem; margin: 30px 0 16px; display: flex; align-items: center; gap: 10px; }
+    .count-badge { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; background: rgba(168, 85, 247, 0.15); border: 1px solid rgba(168, 85, 247, 0.4); color: var(--purple); padding: 3px 10px; border-radius: 12px; }
+
+    .items { display: flex; flex-direction: column; gap: 10px; }
+    .item {
+      display: flex; gap: 14px; align-items: flex-start;
+      background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border);
+      border-radius: 14px; padding: 15px 18px; transition: border 0.3s;
+    }
+    .item:hover { border-color: rgba(168, 85, 247, 0.35); }
+    .votes-chip {
+      font-family: 'JetBrains Mono', monospace; font-weight: 800;
+      background: rgba(168, 85, 247, 0.1); border: 1px solid rgba(168, 85, 247, 0.3);
+      color: var(--purple); border-radius: 10px; padding: 8px 12px; font-size: 0.9rem;
+      display: flex; flex-direction: column; align-items: center; min-width: 50px;
+    }
+    .votes-chip small { font-size: 0.55rem; color: var(--muted); }
+    .item-body { flex: 1; min-width: 0; }
+    .item-text { font-size: 0.92rem; line-height: 1.5; margin-bottom: 6px; word-break: break-word; }
+    .item-meta { font-family: 'JetBrains Mono', monospace; font-size: 0.62rem; color: #64748b; }
+    .del-btn {
+      background: rgba(239, 68, 68, 0.08); border: 1px solid rgba(239, 68, 68, 0.3);
+      color: var(--red); border-radius: 8px; padding: 6px 11px; cursor: pointer;
+      font-size: 0.68rem; font-family: 'JetBrains Mono', monospace; transition: all 0.25s; flex-shrink: 0;
+    }
+    .del-btn:hover { background: rgba(239, 68, 68, 0.22); box-shadow: 0 0 10px rgba(239, 68, 68, 0.4); }
+    .empty { text-align: center; color: #64748b; padding: 26px; font-size: 0.85rem; border: 1px dashed var(--border); border-radius: 12px; }
+  </style>
+</head>
+<body>
+  <div class="glow"></div>
+
+  <div class="topbar">
+    <a href="/" class="brand">
+      <div class="brand-logo">🛡</div>
+      <div class="brand-title">Never<span>Admin</span></div>
+    </a>
+    <div class="nav-links">
+      <a href="/wall" target="_blank" class="back-btn">📝 СТЕНА ИДЕЙ</a>
+      <a href="/guestbook" target="_blank" class="back-btn">📖 ГОСТЕВАЯ</a>
+      <a href="/" class="back-btn">← ПОРТФОЛИО</a>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div class="tag">// Панель управления EcosystemNever</div>
+    <h1>Админ<span>панель Never</span></h1>
+    <p class="sub">Все идеи со Стены и записи гостевой книги в одном месте. Новые появляются автоматически.</p>
+
+    <div class="stats-row">
+      <div class="stat-card">
+        <div class="stat-num" id="ideasCount">0</div>
+        <div class="stat-lbl">Идей всего</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="votesCount">0</div>
+        <div class="stat-lbl">Голосов</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-num" id="gbCount">0</div>
+        <div class="stat-lbl">Записей в книге</div>
+      </div>
+    </div>
+
+    <div class="section-title">💡 Идеи <span class="count-badge" id="ideasBadge">0</span></div>
+    <div class="items" id="ideas"><div class="empty">Загрузка...</div></div>
+
+    <div class="section-title">📖 Гостевая книга <span class="count-badge" id="gbBadge">0</span></div>
+    <div class="items" id="guestbook"><div class="empty">Загрузка...</div></div>
+  </div>
+
+<script>
+  const ideasEl = document.getElementById('ideas');
+  const gbEl = document.getElementById('guestbook');
+
+  function fmt(ts) {
+    return new Date(ts).toLocaleString('ru-RU', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  }
+
+  function ideaNode(e) {
+    const div = document.createElement('div');
+    div.className = 'item';
+
+    const chip = document.createElement('div');
+    chip.className = 'votes-chip';
+    chip.innerHTML = '<span>' + e.votes + '</span><small>ГОСОСА</small>'.replace('ГОСОСА', 'ГОЛОСА');
+
+    const body = document.createElement('div');
+    body.className = 'item-body';
+    const text = document.createElement('div');
+    text.className = 'item-text';
+    text.textContent = e.text;
+    const meta = document.createElement('div');
+    meta.className = 'item-meta';
+    meta.textContent = '#' + e.id + ' · ' + e.author + ' · ' + fmt(e.ts);
+    body.append(text, meta);
+
+    const del = document.createElement('button');
+    del.className = 'del-btn';
+    del.textContent = '✕ Удалить';
+    del.onclick = async () => {
+      if (!confirm('Удалить идею #' + e.id + '?')) return;
+      await fetch('/api/admin/idea/' + e.id, { method: 'DELETE' });
+      div.remove();
+      recalc();
+    };
+
+    div.append(chip, body, del);
+    return div;
+  }
+
+  function gbNode(e) {
+    const div = document.createElement('div');
+    div.className = 'item';
+
+    const body = document.createElement('div');
+    body.className = 'item-body';
+    const text = document.createElement('div');
+    text.className = 'item-text';
+    text.textContent = '«' + e.text + '»';
+    const meta = document.createElement('div');
+    meta.className = 'item-meta';
+    meta.textContent = '#' + e.id + ' · ' + e.name + ' · ' + fmt(e.ts);
+    body.append(text, meta);
+
+    const del = document.createElement('button');
+    del.className = 'del-btn';
+    del.textContent = '✕ Удалить';
+    del.onclick = async () => {
+      if (!confirm('Удалить запись #' + e.id + '?')) return;
+      await fetch('/api/admin/guestbook/' + e.id, { method: 'DELETE' });
+      div.remove();
+      recalc();
+    };
+
+    div.append(body, del);
+    return div;
+  }
+
+  function recalc() {
+    const ideas = ideasEl.querySelectorAll('.item').length;
+    const gb = gbEl.querySelectorAll('.item').length;
+    document.getElementById('ideasCount').textContent = ideas;
+    document.getElementById('gbCount').textContent = gb;
+    document.getElementById('ideasBadge').textContent = ideas;
+    document.getElementById('gbBadge').textContent = gb;
+    let votes = 0;
+    ideasEl.querySelectorAll('.votes-chip span').forEach((s) => votes += Number(s.textContent) || 0);
+    document.getElementById('votesCount').textContent = votes;
+  }
+
+  async function load() {
+    try {
+      const r = await fetch('/api/admin/all');
+      const data = await r.json();
+
+      ideasEl.innerHTML = data.ideas.length ? '' : '<div class="empty">Идей пока нет</div>';
+      data.ideas.forEach((e) => ideasEl.appendChild(ideaNode(e)));
+
+      gbEl.innerHTML = data.guestbook.length ? '' : '<div class="empty">Записей пока нет</div>';
+      data.guestbook.forEach((e) => gbEl.appendChild(gbNode(e)));
+
+      recalc();
+    } catch {
+      ideasEl.innerHTML = '<div class="empty">⚠ Сервер офлайн</div>';
+      gbEl.innerHTML = '<div class="empty">⚠ Сервер офлайн</div>';
+    }
+  }
+
+  load();
+  setInterval(load, 15000);
+</script>
+</body>
+</html>

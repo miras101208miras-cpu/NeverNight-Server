@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NeverPing — Статус сервисов EcosystemNever</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Montserrat:wght@600;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #04060a;
+      --card: rgba(16, 23, 38, 0.7);
+      --border: rgba(255, 255, 255, 0.08);
+      --cyan: #00f0ff;
+      --purple: #a855f7;
+      --green: #10b981;
+      --red: #ef4444;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg); color: #f8fafc;
+      font-family: 'Montserrat', sans-serif;
+      min-height: 100vh; padding: 24px;
+      display: flex; flex-direction: column; align-items: center;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+      background-size: 50px 50px;
+    }
+    .glow {
+      position: fixed; top: -20%; left: 50%; transform: translateX(-50%);
+      width: 70vw; height: 50vh; z-index: -1; pointer-events: none;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.12), rgba(0, 240, 255, 0.08), transparent 70%);
+      filter: blur(90px);
+    }
+    .topbar { width: 100%; max-width: 760px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 40px; gap: 12px; flex-wrap: wrap; }
+    .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: #fff; }
+    .brand-logo {
+      width: 38px; height: 38px; border-radius: 10px;
+      background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.45);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; box-shadow: 0 0 15px rgba(16, 185, 129, 0.35);
+    }
+    .brand-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.05rem; }
+    .brand-title span { color: var(--green); }
+    .back-btn {
+      padding: 9px 18px; border-radius: 20px; text-decoration: none;
+      color: var(--cyan); border: 1px solid rgba(0, 240, 255, 0.35);
+      font-size: 0.75rem; font-weight: 700; letter-spacing: 1px; transition: all 0.3s;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .back-btn:hover { background: rgba(0, 240, 255, 0.12); box-shadow: 0 0 15px rgba(0, 240, 255, 0.4); }
+
+    .wrap { width: 100%; max-width: 760px; }
+    .tag { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: var(--green); letter-spacing: 3px; text-transform: uppercase; margin-bottom: 12px; }
+    h1 { font-family: 'Syne', sans-serif; font-size: clamp(2rem, 5.5vw, 3rem); font-weight: 800; margin-bottom: 10px; }
+    h1 span { background: linear-gradient(135deg, var(--green), var(--cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .sub { color: var(--muted); margin-bottom: 26px; font-size: 0.95rem; }
+
+    .overall {
+      display: flex; align-items: center; gap: 14px;
+      background: var(--card); border: 1px solid var(--border); border-radius: 16px;
+      padding: 20px 24px; margin-bottom: 20px; backdrop-filter: blur(16px);
+      box-shadow: 0 20px 50px rgba(0,0,0,0.55); flex-wrap: wrap;
+    }
+    .pulse {
+      width: 16px; height: 16px; border-radius: 50%; background: var(--green);
+      box-shadow: 0 0 12px var(--green); animation: pulse 2s infinite;
+    }
+    .pulse.bad { background: var(--red); box-shadow: 0 0 12px var(--red); }
+    @keyframes pulse { 0%, 100% { opacity: 1; transform: scale(1); } 50% { opacity: 0.5; transform: scale(0.85); } }
+    .overall-text { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.15rem; }
+    .overall-sub { font-size: 0.72rem; color: var(--muted); font-family: 'JetBrains Mono', monospace; margin-left: auto; }
+
+    .services { display: flex; flex-direction: column; gap: 12px; }
+    .service {
+      display: flex; align-items: center; gap: 16px;
+      background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border);
+      border-radius: 14px; padding: 16px 20px; transition: border 0.3s;
+      text-decoration: none; color: #f8fafc;
+    }
+    .service:hover { border-color: rgba(0, 240, 255, 0.35); }
+    .dot {
+      width: 11px; height: 11px; border-radius: 50%; flex-shrink: 0;
+      background: var(--green); box-shadow: 0 0 10px var(--green);
+    }
+    .dot.down { background: var(--red); box-shadow: 0 0 10px var(--red); }
+    .svc-body { flex: 1; min-width: 0; }
+    .svc-name { font-weight: 800; font-size: 0.95rem; margin-bottom: 2px; }
+    .svc-url { font-size: 0.68rem; color: #64748b; font-family: 'JetBrains Mono', monospace; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .svc-stats { text-align: right; font-family: 'JetBrains Mono', monospace; }
+    .svc-state { font-size: 0.78rem; font-weight: 800; }
+    .svc-state.up { color: var(--green); }
+    .svc-state.down { color: var(--red); }
+    .svc-ms { font-size: 0.65rem; color: #64748b; }
+    .refresh-btn {
+      margin-top: 22px; width: 100%;
+      padding: 13px; border: 1px solid rgba(0, 240, 255, 0.35); border-radius: 12px;
+      background: rgba(0, 240, 255, 0.06); color: var(--cyan); cursor: pointer;
+      font-family: 'JetBrains Mono', monospace; font-weight: 700; font-size: 0.8rem;
+      letter-spacing: 1px; transition: all 0.3s;
+    }
+    .refresh-btn:hover { background: rgba(0, 240, 255, 0.15); box-shadow: 0 0 18px rgba(0, 240, 255, 0.4); }
+    .refresh-btn:disabled { opacity: 0.5; cursor: wait; }
+  </style>
+</head>
+<body>
+  <div class="glow"></div>
+
+  <div class="topbar">
+    <a href="/" class="brand">
+      <div class="brand-logo">📡</div>
+      <div class="brand-title">Never<span>Ping</span></div>
+    </a>
+    <a href="/" class="back-btn">← ПОРТФОЛИО</a>
+  </div>
+
+  <div class="wrap">
+    <div class="tag">// Онлайн-сервис EcosystemNever</div>
+    <h1>Статус <span>экосистемы</span></h1>
+    <p class="sub">NeverNight Server пингует все сервисы EcosystemNever каждую минуту. Здесь — актуальный статус.</p>
+
+    <div class="overall">
+      <div class="pulse" id="overallPulse"></div>
+      <div class="overall-text" id="overallText">Проверяю сервисы...</div>
+      <div class="overall-sub" id="lastCheck"></div>
+    </div>
+
+    <div class="services" id="services"></div>
+
+    <button class="refresh-btn" id="refreshBtn">↻ ОБНОВИТЬ СЕЙЧАС</button>
+  </div>
+
+<script>
+  const servicesEl = document.getElementById('services');
+  const overallPulse = document.getElementById('overallPulse');
+  const overallText = document.getElementById('overallText');
+  const lastCheck = document.getElementById('lastCheck');
+  const refreshBtn = document.getElementById('refreshBtn');
+
+  function render(data) {
+    const up = data.services.filter((s) => s.ok).length;
+    const total = data.services.length;
+    overallPulse.classList.toggle('bad', up < total);
+    overallText.textContent = up === total
+      ? '✅ Все системы работают'
+      : `⚠ ${total - up} из ${total} сервисов недоступны`;
+    lastCheck.textContent = 'проверка: ' + new Date(data.checkedAt).toLocaleTimeString('ru-RU');
+
+    servicesEl.innerHTML = '';
+    for (const s of data.services) {
+      const a = document.createElement('a');
+      a.className = 'service';
+      a.href = s.url;
+      a.target = '_blank';
+      a.rel = 'noopener';
+
+      const dot = document.createElement('div');
+      dot.className = 'dot' + (s.ok ? '' : ' down');
+
+      const body = document.createElement('div');
+      body.className = 'svc-body';
+      const name = document.createElement('div');
+      name.className = 'svc-name';
+      name.textContent = s.name;
+      const url = document.createElement('div');
+      url.className = 'svc-url';
+      url.textContent = s.url;
+      body.append(name, url);
+
+      const stats = document.createElement('div');
+      stats.className = 'svc-stats';
+      const state = document.createElement('div');
+      state.className = 'svc-state ' + (s.ok ? 'up' : 'down');
+      state.textContent = s.ok ? 'В СЕТИ · ' + s.code : 'ОФЛАЙН';
+      const ms = document.createElement('div');
+      ms.className = 'svc-ms';
+      ms.textContent = s.ms + ' мс';
+      stats.append(state, ms);
+
+      a.append(dot, body, stats);
+      servicesEl.appendChild(a);
+    }
+  }
+
+  async function load(showSpinner) {
+    if (showSpinner) refreshBtn.disabled = true;
+    try {
+      const r = await fetch('/api/status');
+      render(await r.json());
+    } catch {
+      overallPulse.classList.add('bad');
+      overallText.textContent = '⚠ Сервер офлайн';
+    }
+    refreshBtn.disabled = false;
+  }
+
+  refreshBtn.onclick = async () => {
+    refreshBtn.disabled = true;
+    refreshBtn.textContent = '⏳ ПИНГУЮ...';
+    try {
+      const r = await fetch('/api/status/refresh', { method: 'POST' });
+      render(await r.json());
+    } catch { /* ignore */ }
+    refreshBtn.textContent = '↻ ОБНОВИТЬ СЕЙЧАС';
+    refreshBtn.disabled = false;
+  };
+
+  load();
+  setInterval(load, 30 * 1000);
+</script>
+</body>
+</html>

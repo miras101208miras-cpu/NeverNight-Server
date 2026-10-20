@@ -1,0 +1,8 @@
+node_modules/
+secret.json
+data/
+*.db
+*.db-shm
+*.db-wal
+.env
+npm-debug.log*

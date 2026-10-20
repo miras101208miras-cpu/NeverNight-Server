@@ -1,0 +1,213 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NeverGuestbook — Гостевая книга EcosystemNever</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Montserrat:wght@600;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #04060a;
+      --card: rgba(16, 23, 38, 0.7);
+      --border: rgba(255, 255, 255, 0.08);
+      --cyan: #00f0ff;
+      --purple: #a855f7;
+      --muted: #94a3b8;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      background: var(--bg); color: #f8fafc;
+      font-family: 'Montserrat', sans-serif;
+      min-height: 100vh; padding: 24px;
+      display: flex; flex-direction: column; align-items: center;
+      background-image:
+        linear-gradient(rgba(255,255,255,0.025) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,255,255,0.025) 1px, transparent 1px);
+      background-size: 50px 50px;
+    }
+    .glow {
+      position: fixed; top: -20%; left: 50%; transform: translateX(-50%);
+      width: 70vw; height: 50vh; z-index: -1; pointer-events: none;
+      background: radial-gradient(circle, rgba(16, 185, 129, 0.12), rgba(0, 240, 255, 0.08), transparent 70%);
+      filter: blur(90px);
+    }
+    .topbar { width: 100%; max-width: 760px; display: flex; align-items: center; justify-content: space-between; margin-bottom: 40px; gap: 12px; flex-wrap: wrap; }
+    .brand { display: flex; align-items: center; gap: 10px; text-decoration: none; color: #fff; }
+    .brand-logo {
+      width: 38px; height: 38px; border-radius: 10px;
+      background: rgba(16, 185, 129, 0.1); border: 1px solid rgba(16, 185, 129, 0.45);
+      display: flex; align-items: center; justify-content: center;
+      font-size: 1.1rem; box-shadow: 0 0 15px rgba(16, 185, 129, 0.35);
+    }
+    .brand-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.05rem; }
+    .brand-title span { color: #10b981; }
+    .back-btn {
+      padding: 9px 18px; border-radius: 20px; text-decoration: none;
+      color: var(--cyan); border: 1px solid rgba(0, 240, 255, 0.35);
+      font-size: 0.75rem; font-weight: 700; letter-spacing: 1px; transition: all 0.3s;
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .back-btn:hover { background: rgba(0, 240, 255, 0.12); box-shadow: 0 0 15px rgba(0, 240, 255, 0.4); }
+
+    .wrap { width: 100%; max-width: 760px; }
+    .tag { font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; color: #10b981; letter-spacing: 3px; text-transform: uppercase; margin-bottom: 12px; }
+    h1 { font-family: 'Syne', sans-serif; font-size: clamp(2rem, 5.5vw, 3rem); font-weight: 800; margin-bottom: 10px; }
+    h1 span { background: linear-gradient(135deg, #10b981, var(--cyan)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .sub { color: var(--muted); margin-bottom: 30px; font-size: 0.95rem; }
+
+    .card {
+      background: var(--card); border: 1px solid var(--border); border-radius: 18px;
+      padding: 24px; backdrop-filter: blur(16px); margin-bottom: 26px;
+      box-shadow: 0 20px 50px rgba(0,0,0,0.55);
+    }
+    .gb-input {
+      width: 100%; background: rgba(0, 0, 0, 0.45); border: 1px solid var(--border);
+      border-radius: 12px; padding: 13px 16px; color: #fff; outline: none;
+      font-family: 'Montserrat', sans-serif; font-size: 0.9rem; margin-bottom: 12px; transition: border 0.3s;
+    }
+    textarea.gb-input { min-height: 90px; resize: vertical; }
+    .gb-input:focus { border-color: #10b981; box-shadow: 0 0 12px rgba(16, 185, 129, 0.25); }
+    .gb-btn {
+      padding: 13px 30px; border: none; border-radius: 12px; cursor: pointer;
+      background: linear-gradient(135deg, #10b981, var(--cyan));
+      color: #04060a; font-weight: 800; font-size: 0.92rem; font-family: 'Montserrat', sans-serif;
+      box-shadow: 0 0 18px rgba(16, 185, 129, 0.4); transition: all 0.3s;
+    }
+    .gb-btn:hover { box-shadow: 0 0 32px rgba(16, 185, 129, 0.75); transform: translateY(-1px); }
+    .gb-btn:disabled { opacity: 0.5; cursor: wait; }
+    .gb-err { color: #ff5f56; font-size: 0.75rem; min-height: 16px; margin-top: 8px; font-family: 'JetBrains Mono', monospace; }
+
+    .entries { display: flex; flex-direction: column; gap: 12px; }
+    .entry {
+      background: rgba(255, 255, 255, 0.03); border: 1px solid var(--border);
+      border-radius: 14px; padding: 16px 18px; animation: slideIn 0.35s cubic-bezier(0.16, 1, 0.3, 1);
+    }
+    @keyframes slideIn { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: translateY(0); } }
+    .entry-head { display: flex; align-items: center; gap: 10px; margin-bottom: 7px; }
+    .entry-avatar {
+      width: 32px; height: 32px; border-radius: 50%;
+      display: flex; align-items: center; justify-content: center;
+      font-weight: 800; font-size: 0.85rem; color: #04060a;
+    }
+    .entry-name { font-weight: 800; font-size: 0.88rem; }
+    .entry-time { font-size: 0.65rem; color: #64748b; font-family: 'JetBrains Mono', monospace; margin-left: auto; }
+    .entry-text { font-size: 0.88rem; line-height: 1.5; color: #cbd5e1; word-break: break-word; }
+    .empty { text-align: center; color: #64748b; padding: 30px; font-size: 0.85rem; }
+  </style>
+</head>
+<body>
+  <div class="glow"></div>
+
+  <div class="topbar">
+    <a href="/" class="brand">
+      <div class="brand-logo">📖</div>
+      <div class="brand-title">Never<span>Guestbook</span></div>
+    </a>
+    <a href="/" class="back-btn">← ПОРТФОЛИО</a>
+  </div>
+
+  <div class="wrap">
+    <div class="tag">// Онлайн-сервис EcosystemNever</div>
+    <h1>Гостевая <span>книга Never</span></h1>
+    <p class="sub">Оставь запись — она сохранится в SQLite на сервере экосистемы и увидят все гости.</p>
+
+    <div class="card">
+      <input class="gb-input" id="nameInput" placeholder="Твоё имя / ник" maxlength="24">
+      <textarea class="gb-input" id="textInput" placeholder="Напиши что-нибудь доброе..." maxlength="500"></textarea>
+      <button class="gb-btn" id="addBtn">✍️ Оставить запись</button>
+      <div class="gb-err" id="err"></div>
+    </div>
+
+    <div class="entries" id="entries">
+      <div class="empty" id="emptyMsg">Загрузка записей...</div>
+    </div>
+  </div>
+
+<script>
+  const entriesEl = document.getElementById('entries');
+  const nameInput = document.getElementById('nameInput');
+  const textInput = document.getElementById('textInput');
+  const addBtn = document.getElementById('addBtn');
+  const errEl = document.getElementById('err');
+  const AVATAR_COLORS = ['#00f0ff', '#a855f7', '#10b981', '#f59e0b', '#ef4444', '#ec4899', '#3b82f6'];
+
+  const hash = (s) => [...s].reduce((a, c) => a + c.charCodeAt(0), 0);
+
+  function timeAgo(ts) {
+    const s = Math.floor((Date.now() - ts) / 1000);
+    if (s < 60) return 'только что';
+    if (s < 3600) return Math.floor(s / 60) + ' мин назад';
+    if (s < 86400) return Math.floor(s / 3600) + ' ч назад';
+    return new Date(ts).toLocaleDateString('ru-RU');
+  }
+
+  function renderEntry(e) {
+    const div = document.createElement('div');
+    div.className = 'entry';
+
+    const head = document.createElement('div');
+    head.className = 'entry-head';
+    const avatar = document.createElement('div');
+    avatar.className = 'entry-avatar';
+    avatar.textContent = e.name[0].toUpperCase();
+    avatar.style.background = AVATAR_COLORS[hash(e.name) % AVATAR_COLORS.length];
+    const nm = document.createElement('span');
+    nm.className = 'entry-name';
+    nm.textContent = e.name;
+    nm.style.color = AVATAR_COLORS[hash(e.name) % AVATAR_COLORS.length];
+    const time = document.createElement('span');
+    time.className = 'entry-time';
+    time.textContent = timeAgo(e.ts);
+    head.append(avatar, nm, time);
+
+    const text = document.createElement('div');
+    text.className = 'entry-text';
+    text.textContent = e.text;
+
+    div.append(head, text);
+    return div;
+  }
+
+  async function load() {
+    try {
+      const r = await fetch('/api/guestbook');
+      const rows = await r.json();
+      entriesEl.innerHTML = '';
+      if (!rows.length) {
+        entriesEl.innerHTML = '<div class="empty">Пока записей нет — будь первым! ✍️</div>';
+        return;
+      }
+      rows.forEach((e) => entriesEl.appendChild(renderEntry(e)));
+    } catch {
+      entriesEl.innerHTML = '<div class="empty">⚠ Не удалось загрузить. Сервер офлайн — запусти npm start в папке server.</div>';
+    }
+  }
+
+  addBtn.onclick = async () => {
+    errEl.textContent = '';
+    const name = nameInput.value.trim();
+    const text = textInput.value.trim();
+    if (!name || !text) { errEl.textContent = '⚠ Заполни имя и текст.'; return; }
+    addBtn.disabled = true;
+    try {
+      const r = await fetch('/api/guestbook', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ name, text })
+      });
+      const data = await r.json();
+      if (!r.ok) { errEl.textContent = '⚠ ' + (data.error || 'Ошибка сервера.'); addBtn.disabled = false; return; }
+      textInput.value = '';
+      entriesEl.prepend(renderEntry(data));
+    } catch {
+      errEl.textContent = '⚠ Сервер недоступен.';
+    }
+    addBtn.disabled = false;
+  };
+
+  load();
+</script>
+</body>
+</html>
