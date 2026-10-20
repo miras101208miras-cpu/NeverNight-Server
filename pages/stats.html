@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NeverStats — Аналитика EcosystemNever</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Montserrat:wght@600;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    :root { --bg:#04060a; --card:rgba(16,23,38,0.7); --border:rgba(255,255,255,0.08); --cyan:#00f0ff; --purple:#a855f7; --green:#10b981; --muted:#94a3b8; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { background:var(--bg); color:#f8fafc; font-family:'Montserrat',sans-serif; min-height:100vh; padding:24px; display:flex; flex-direction:column; align-items:center;
+      background-image:linear-gradient(rgba(255,255,255,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.025) 1px,transparent 1px); background-size:50px 50px; }
+    .glow { position:fixed; top:-20%; left:50%; transform:translateX(-50%); width:70vw; height:50vh; z-index:-1; pointer-events:none; background:radial-gradient(circle,rgba(16,185,129,0.12),rgba(0,240,255,0.08),transparent 70%); filter:blur(90px); }
+    .topbar { width:100%; max-width:960px; display:flex; align-items:center; justify-content:space-between; margin-bottom:36px; gap:12px; flex-wrap:wrap; }
+    .brand { display:flex; align-items:center; gap:10px; text-decoration:none; color:#fff; }
+    .brand-logo { width:38px; height:38px; border-radius:10px; background:rgba(16,185,129,0.08); border:1px solid rgba(16,185,129,0.45); display:flex; align-items:center; justify-content:center; font-size:1.1rem; box-shadow:0 0 15px rgba(16,185,129,0.35); }
+    .brand-title { font-family:'Syne',sans-serif; font-weight:800; font-size:1.05rem; }
+    .brand-title span { color:var(--green); }
+    .back-btn { padding:9px 18px; border-radius:20px; text-decoration:none; color:var(--cyan); border:1px solid rgba(0,240,255,0.35); font-size:0.72rem; font-weight:700; letter-spacing:1px; transition:all 0.3s; font-family:'JetBrains Mono',monospace; }
+    .back-btn:hover { background:rgba(0,240,255,0.12); box-shadow:0 0 15px rgba(0,240,255,0.4); }
+    .wrap { width:100%; max-width:960px; }
+    .tag { font-family:'JetBrains Mono',monospace; font-size:0.75rem; color:var(--green); letter-spacing:3px; text-transform:uppercase; margin-bottom:12px; }
+    h1 { font-family:'Syne',sans-serif; font-size:clamp(2rem,5.5vw,3rem); font-weight:800; margin-bottom:10px; }
+    h1 span { background:linear-gradient(135deg,var(--green),var(--cyan)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+    .sub { color:var(--muted); margin-bottom:30px; font-size:0.95rem; }
+    .stats-row { display:flex; gap:14px; margin-bottom:26px; flex-wrap:wrap; }
+    .stat-card { flex:1; min-width:130px; background:var(--card); border:1px solid var(--border); border-radius:16px; padding:20px; backdrop-filter:blur(16px); text-align:center; box-shadow:0 15px 40px rgba(0,0,0,0.5); }
+    .stat-num { font-family:'Syne',sans-serif; font-weight:800; font-size:2.1rem; background:linear-gradient(135deg,var(--green),var(--cyan)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+    .stat-lbl { font-family:'JetBrains Mono',monospace; font-size:0.6rem; color:var(--muted); letter-spacing:1px; text-transform:uppercase; margin-top:4px; }
+    .section-title { font-family:'Syne',sans-serif; font-weight:800; font-size:1.3rem; margin:26px 0 14px; }
+    .panel { background:var(--card); border:1px solid var(--border); border-radius:18px; padding:20px; backdrop-filter:blur(16px); box-shadow:0 15px 40px rgba(0,0,0,0.5); }
+    #chart { width:100%; height:220px; display:block; }
+    .cols { display:grid; grid-template-columns:1fr 1fr; gap:16px; }
+    @media (max-width:640px){ .cols { grid-template-columns:1fr; } }
+    .row { display:flex; justify-content:space-between; align-items:center; padding:9px 0; border-bottom:1px solid rgba(255,255,255,0.05); font-family:'JetBrains Mono',monospace; font-size:0.78rem; }
+    .row:last-child { border-bottom:none; }
+    .row .c { color:var(--green); font-weight:800; }
+    .empty { text-align:center; color:#64748b; padding:30px; font-size:0.85rem; }
+    /* Вход */
+    .lock { position:fixed; inset:0; z-index:50; display:none; align-items:center; justify-content:center; padding:20px; background:rgba(4,6,10,0.85); backdrop-filter:blur(8px); }
+    .lock-box { width:100%; max-width:360px; text-align:center; background:var(--card); border:1px solid rgba(16,185,129,0.4); border-radius:20px; padding:34px 28px; box-shadow:0 20px 60px rgba(0,0,0,0.7); }
+    .lock-icon { font-size:2.4rem; margin-bottom:12px; }
+    .lock h2 { font-family:'Syne',sans-serif; font-size:1.4rem; margin-bottom:6px; }
+    .lock p { color:var(--muted); font-size:0.82rem; margin-bottom:20px; }
+    .lock input { width:100%; padding:13px 16px; border-radius:12px; margin-bottom:12px; background:rgba(255,255,255,0.05); border:1px solid var(--border); color:#f8fafc; font-family:'JetBrains Mono',monospace; text-align:center; outline:none; }
+    .lock input:focus { border-color:rgba(16,185,129,0.5); }
+    .lock-err { color:#ef4444; font-size:0.78rem; min-height:18px; margin-bottom:8px; font-family:'JetBrains Mono',monospace; }
+    .lock-btn { width:100%; padding:13px; border:none; border-radius:12px; cursor:pointer; background:linear-gradient(135deg,var(--green),var(--cyan)); color:#04060a; font-family:'Syne',sans-serif; font-weight:800; font-size:1rem; }
+  </style>
+</head>
+<body>
+  <div class="glow"></div>
+  <div class="topbar">
+    <a href="/" class="brand"><div class="brand-logo">📈</div><div class="brand-title">Never<span>Stats</span></div></a>
+    <div style="display:flex;gap:10px;flex-wrap:wrap">
+      <a href="/admin" class="back-btn">🛡 АДМИНКА</a>
+      <a href="/" class="back-btn">← НА ХАБ</a>
+    </div>
+  </div>
+  <div class="wrap">
+    <div class="tag">// Аналитика EcosystemNever</div>
+    <h1>Посещения <span>экосистемы</span></h1>
+    <p class="sub">Сколько людей заходит на сервисы, откуда приходят и какие страницы популярнее. Данные закрыты паролем.</p>
+
+    <div class="stats-row">
+      <div class="stat-card"><div class="stat-num" id="total">0</div><div class="stat-lbl">Просмотров всего</div></div>
+      <div class="stat-card"><div class="stat-num" id="uniq">0</div><div class="stat-lbl">Уникальных гостей</div></div>
+      <div class="stat-card"><div class="stat-num" id="today">0</div><div class="stat-lbl">Сегодня</div></div>
+    </div>
+
+    <div class="section-title">📊 Просмотры по дням</div>
+    <div class="panel"><canvas id="chart"></canvas></div>
+
+    <div class="section-title">🔎 Источники и страницы</div>
+    <div class="cols">
+      <div class="panel"><div style="font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:var(--muted);margin-bottom:10px">ОТКУДА ПРИШЛИ</div><div id="refs"><div class="empty">—</div></div></div>
+      <div class="panel"><div style="font-family:'JetBrains Mono',monospace;font-size:0.7rem;color:var(--muted);margin-bottom:10px">ПОПУЛЯРНЫЕ СТРАНИЦЫ</div><div id="pages"><div class="empty">—</div></div></div>
+    </div>
+  </div>
+
+  <div class="lock" id="lock">
+    <div class="lock-box">
+      <div class="lock-icon">🔐</div>
+      <h2>Аналитика закрыта</h2>
+      <p>Введите пароль администратора</p>
+      <form id="lockForm">
+        <input type="password" id="lockPass" placeholder="Пароль" autocomplete="off">
+        <div class="lock-err" id="lockErr"></div>
+        <button type="submit" class="lock-btn">Показать →</button>
+      </form>
+    </div>
+  </div>
+
+<script>
+  const $ = (id) => document.getElementById(id);
+  let PASS = sessionStorage.getItem('nn_admin_pass') || '';
+  const showLock = () => { $('lock').style.display = 'flex'; $('lockPass').focus(); };
+
+  async function load() {
+    const r = await fetch('/api/admin/stats', { headers: { 'x-admin-pass': PASS } });
+    if (r.status === 401) { showLock(); return; }
+    const d = await r.json();
+    $('total').textContent = d.total; $('uniq').textContent = d.uniq; $('today').textContent = d.today;
+    drawChart(d.series);
+    $('refs').innerHTML = d.byRef.length ? d.byRef.map((x) => '<div class="row"><span>' + esc(x.ref) + '</span><span class="c">' + x.c + '</span></div>').join('') : '<div class="empty">—</div>';
+    $('pages').innerHTML = d.byPage.length ? d.byPage.map((x) => '<div class="row"><span>' + esc(x.page) + '</span><span class="c">' + x.c + '</span></div>').join('') : '<div class="empty">—</div>';
+  }
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+
+  function drawChart(data) {
+    const canvas = $('chart'); const dpr = window.devicePixelRatio || 1;
+    const cssW = canvas.clientWidth || 800, cssH = 220;
+    canvas.width = cssW * dpr; canvas.height = cssH * dpr;
+    const ctx = canvas.getContext('2d'); ctx.scale(dpr, dpr); ctx.clearRect(0,0,cssW,cssH);
+    const padL = 34, padB = 26, padT = 12, padR = 8, W = cssW - padL - padR, H = cssH - padT - padB;
+    const max = Math.max(1, ...data.map((d) => d.c));
+    const n = data.length, gap = 5, barW = Math.max(5, (W - gap * (n - 1)) / n);
+    ctx.font = '10px "JetBrains Mono", monospace';
+    for (let s = 0; s <= 4; s++) {
+      const y = padT + H - H * s / 4;
+      ctx.strokeStyle = 'rgba(255,255,255,0.06)'; ctx.beginPath(); ctx.moveTo(padL, y); ctx.lineTo(cssW - padR, y); ctx.stroke();
+      ctx.fillStyle = '#64748b'; ctx.textAlign = 'right'; ctx.textBaseline = 'middle'; ctx.fillText(Math.round(max * s / 4), padL - 6, y);
+    }
+    const grad = ctx.createLinearGradient(0, padT, 0, padT + H);
+    grad.addColorStop(0, '#10b981'); grad.addColorStop(1, '#00f0ff');
+    data.forEach((d, i) => {
+      const h = H * d.c / max, x = padL + i * (barW + gap), y = padT + H - h;
+      ctx.fillStyle = grad; ctx.fillRect(x, y, barW, h);
+      if (i % 2 === 0) { ctx.fillStyle = '#64748b'; ctx.textAlign = 'center'; ctx.textBaseline = 'top'; ctx.fillText(d.day.slice(5), x + barW / 2, padT + H + 6); }
+    });
+  }
+  window.addEventListener('resize', () => { if (PASS) load().catch(() => {}); });
+
+  $('lockForm').addEventListener('submit', async (e) => {
+    e.preventDefault(); const v = $('lockPass').value;
+    const r = await fetch('/api/admin/stats', { headers: { 'x-admin-pass': v } });
+    if (r.ok) { PASS = v; sessionStorage.setItem('nn_admin_pass', v); $('lock').style.display = 'none'; load(); }
+    else $('lockErr').textContent = '❌ Неверный пароль';
+  });
+
+  (async function init() {
+    if (PASS) { const r = await fetch('/api/admin/stats', { headers: { 'x-admin-pass': PASS } }); if (r.ok) { await load(); return; } PASS = ''; }
+    showLock();
+  })();
+</script>
+</body>
+</html>

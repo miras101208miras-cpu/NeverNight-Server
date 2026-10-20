@@ -161,6 +161,7 @@
       <a href="/wall" target="_blank" class="back-btn">📝 СТЕНА ИДЕЙ</a>
       <a href="/guestbook" target="_blank" class="back-btn">📖 ГОСТЕВАЯ</a>
       <a href="/chat" target="_blank" class="back-btn">💬 ЧАТ</a>
+      <a href="/stats" target="_blank" class="back-btn">📈 АНАЛИТИКА</a>
       <a href="/" class="back-btn">← НА ХАБ</a>
     </div>
   </div>
@@ -196,6 +197,20 @@
       </div>
       <div class="online-row" id="chatOnline"></div>
       <div class="items" id="chatMsgs"><div class="empty">Загрузка...</div></div>
+    </div>
+
+    <div class="section-title">🗂 Каталог проектов</div>
+    <div class="panel">
+      <form id="projForm" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+        <input id="pName" placeholder="Название" required style="flex:1;min-width:140px;padding:10px 13px;border-radius:10px;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:#f8fafc;font-family:'JetBrains Mono',monospace;font-size:0.8rem;outline:none">
+        <input id="pDesc" placeholder="Описание" style="flex:2;min-width:180px;padding:10px 13px;border-radius:10px;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:#f8fafc;font-family:'JetBrains Mono',monospace;font-size:0.8rem;outline:none">
+        <input id="pLink" placeholder="Ссылка (https://...)" style="flex:2;min-width:160px;padding:10px 13px;border-radius:10px;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:#f8fafc;font-family:'JetBrains Mono',monospace;font-size:0.8rem;outline:none">
+        <select id="pStatus" style="padding:10px 13px;border-radius:10px;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:#f8fafc;font-family:'JetBrains Mono',monospace;font-size:0.8rem">
+          <option>Онлайн</option><option>Бета</option><option>В разработке</option>
+        </select>
+        <button type="submit" class="lock-btn" style="width:auto;padding:10px 20px;font-size:0.85rem">+ Добавить</button>
+      </form>
+      <div class="items" id="projList"><div class="empty">Загрузка...</div></div>
     </div>
 
     <div class="section-title">💡 Идеи <span class="count-badge" id="ideasBadge">0</span></div>
@@ -392,7 +407,38 @@
   $('roomSel').addEventListener('change', (e) => { curRoom = e.target.value; loadChatMsgs(); loadOnline(); });
 
   async function loadChat() { await loadChatRooms(); await Promise.all([loadChatMsgs(), loadOnline()]); }
-  async function loadAll() { try { await Promise.all([loadMain(), loadActivity(), loadChat()]); } catch (e) { if (e.message !== '401') console.error(e); } }
+  // ---------- Каталог проектов ----------
+  function projNode(p) {
+    const div = document.createElement('div'); div.className = 'item';
+    const body = document.createElement('div'); body.className = 'item-body';
+    const text = document.createElement('div'); text.className = 'item-text';
+    text.textContent = p.name + ' — ' + (p.desc || '');
+    const meta = document.createElement('div'); meta.className = 'item-meta';
+    meta.textContent = '#' + p.id + ' · ' + (p.status || '') + (p.link ? ' · ' + p.link : '');
+    body.append(text, meta);
+    const del = document.createElement('button'); del.className = 'del-btn'; del.textContent = '✕ Удалить';
+    del.onclick = async () => {
+      if (!confirm('Удалить проект «' + p.name + '»?')) return;
+      await api('/api/admin/projects/' + p.id, { method: 'DELETE' });
+      div.remove();
+    };
+    div.append(body, del); return div;
+  }
+  async function loadProjects() {
+    const rows = await (await fetch('/api/projects')).json();
+    $('projList').innerHTML = rows.length ? '' : '<div class="empty">Проектов пока нет</div>';
+    rows.forEach((p) => $('projList').appendChild(projNode(p)));
+  }
+  $('projForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const body = { name: $('pName').value, desc: $('pDesc').value, link: $('pLink').value, status: $('pStatus').value };
+    if (!body.name.trim()) return;
+    await api('/api/admin/projects', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+    $('projForm').reset();
+    loadProjects();
+  });
+
+  async function loadAll() { try { await Promise.all([loadMain(), loadActivity(), loadChat(), loadProjects()]); } catch (e) { if (e.message !== '401') console.error(e); } }
 
   (async function init() {
     if (PASS && await tryAuth(PASS)) { hideLock(); loadAll(); }

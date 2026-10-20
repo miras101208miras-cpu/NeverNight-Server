@@ -1,0 +1,76 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NeverProjects — Каталог проектов EcosystemNever</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Montserrat:wght@600;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    :root { --bg:#04060a; --card:rgba(16,23,38,0.7); --border:rgba(255,255,255,0.08); --cyan:#00f0ff; --purple:#a855f7; --green:#10b981; --muted:#94a3b8; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { background:var(--bg); color:#f8fafc; font-family:'Montserrat',sans-serif; min-height:100vh; padding:24px; display:flex; flex-direction:column; align-items:center;
+      background-image:linear-gradient(rgba(255,255,255,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.025) 1px,transparent 1px); background-size:50px 50px; }
+    .glow { position:fixed; top:-20%; left:50%; transform:translateX(-50%); width:70vw; height:50vh; z-index:-1; pointer-events:none; background:radial-gradient(circle,rgba(0,240,255,0.12),rgba(168,85,247,0.1),transparent 70%); filter:blur(90px); }
+    .topbar { width:100%; max-width:960px; display:flex; align-items:center; justify-content:space-between; margin-bottom:36px; gap:12px; flex-wrap:wrap; }
+    .brand { display:flex; align-items:center; gap:10px; text-decoration:none; color:#fff; }
+    .brand-logo { width:38px; height:38px; border-radius:10px; background:rgba(0,240,255,0.08); border:1px solid rgba(0,240,255,0.45); display:flex; align-items:center; justify-content:center; font-size:1.1rem; box-shadow:0 0 15px rgba(0,240,255,0.35); }
+    .brand-title { font-family:'Syne',sans-serif; font-weight:800; font-size:1.05rem; }
+    .brand-title span { color:var(--cyan); }
+    .back-btn { padding:9px 18px; border-radius:20px; text-decoration:none; color:var(--cyan); border:1px solid rgba(0,240,255,0.35); font-size:0.72rem; font-weight:700; letter-spacing:1px; transition:all 0.3s; font-family:'JetBrains Mono',monospace; }
+    .back-btn:hover { background:rgba(0,240,255,0.12); box-shadow:0 0 15px rgba(0,240,255,0.4); }
+    .wrap { width:100%; max-width:960px; }
+    .tag { font-family:'JetBrains Mono',monospace; font-size:0.75rem; color:var(--cyan); letter-spacing:3px; text-transform:uppercase; margin-bottom:12px; }
+    h1 { font-family:'Syne',sans-serif; font-size:clamp(2rem,5.5vw,3rem); font-weight:800; margin-bottom:10px; }
+    h1 span { background:linear-gradient(135deg,var(--cyan),var(--purple)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+    .sub { color:var(--muted); margin-bottom:30px; font-size:0.95rem; }
+    .grid { display:grid; grid-template-columns:repeat(auto-fill,minmax(260px,1fr)); gap:16px; }
+    .card { background:var(--card); border:1px solid var(--border); border-radius:18px; padding:22px; backdrop-filter:blur(16px); box-shadow:0 15px 40px rgba(0,0,0,0.5); transition:all .3s; text-decoration:none; color:#f8fafc; display:flex; flex-direction:column; gap:8px; }
+    .card:hover { transform:translateY(-4px); border-color:rgba(0,240,255,0.4); box-shadow:0 20px 50px rgba(0,0,0,0.6),0 0 25px rgba(0,240,255,0.2); }
+    .card-top { display:flex; align-items:center; justify-content:space-between; gap:8px; }
+    .name { font-family:'Syne',sans-serif; font-weight:800; font-size:1.15rem; }
+    .status { font-family:'JetBrains Mono',monospace; font-size:0.6rem; padding:3px 9px; border-radius:10px; letter-spacing:1px; text-transform:uppercase; white-space:nowrap; }
+    .status.online { color:var(--green); background:rgba(16,185,129,0.1); border:1px solid rgba(16,185,129,0.35); }
+    .status.beta { color:var(--purple); background:rgba(168,85,247,0.1); border:1px solid rgba(168,85,247,0.35); }
+    .desc { color:var(--muted); font-size:0.85rem; line-height:1.5; flex:1; }
+    .go { font-family:'JetBrains Mono',monospace; font-size:0.72rem; color:var(--cyan); }
+    .empty { text-align:center; color:#64748b; padding:40px; border:1px dashed var(--border); border-radius:12px; grid-column:1/-1; }
+  </style>
+</head>
+<body>
+  <div class="glow"></div>
+  <div class="topbar">
+    <a href="/" class="brand"><div class="brand-logo">🗂</div><div class="brand-title">Never<span>Projects</span></div></a>
+    <a href="/" class="back-btn">← НА ХАБ</a>
+  </div>
+  <div class="wrap">
+    <div class="tag">// Каталог EcosystemNever</div>
+    <h1>Все проекты <span>экосистемы</span></h1>
+    <p class="sub">Полный список проектов NeverNight: сайты, сервисы и бот — со статусом и ссылками.</p>
+    <div class="grid" id="grid"><div class="empty">Загрузка...</div></div>
+  </div>
+<script>
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+  function card(p) {
+    const s = (p.status || '').toLowerCase();
+    const cls = s.includes('бета') || s.includes('beta') ? 'beta' : 'online';
+    const href = p.link || '#';
+    const a = document.createElement('a');
+    a.className = 'card';
+    a.href = href;
+    if (/^https?:/.test(href)) { a.target = '_blank'; a.rel = 'noopener'; }
+    a.innerHTML =
+      '<div class="card-top"><div class="name">' + esc(p.name) + '</div><div class="status ' + cls + '">' + esc(p.status || 'Онлайн') + '</div></div>' +
+      '<div class="desc">' + esc(p.desc) + '</div>' +
+      '<div class="go">Открыть →</div>';
+    return a;
+  }
+  fetch('/api/projects').then((r) => r.json()).then((rows) => {
+    const g = document.getElementById('grid');
+    g.innerHTML = rows.length ? '' : '<div class="empty">Проектов пока нет</div>';
+    rows.forEach((p) => g.appendChild(card(p)));
+  }).catch(() => { document.getElementById('grid').innerHTML = '<div class="empty">⚠ Сервер офлайн</div>'; });
+</script>
+</body>
+</html>

@@ -53,6 +53,25 @@ db.exec(`
     ip TEXT NOT NULL,
     PRIMARY KEY (idea_id, ip)
   );
+  -- Каталог проектов экосистемы (NeverProjects)
+  CREATE TABLE IF NOT EXISTS projects (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL,
+    desc TEXT NOT NULL DEFAULT '',
+    link TEXT NOT NULL DEFAULT '',
+    status TEXT NOT NULL DEFAULT 'Онлайн',
+    sort INTEGER NOT NULL DEFAULT 0,
+    ts INTEGER NOT NULL
+  );
+  -- Аналитика посещений (NeverStats)
+  CREATE TABLE IF NOT EXISTS visits (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    page TEXT NOT NULL DEFAULT '/',
+    ref TEXT NOT NULL DEFAULT '',
+    ua TEXT NOT NULL DEFAULT '',
+    ip TEXT NOT NULL DEFAULT '',
+    ts INTEGER NOT NULL
+  );
 `);
 
 // ---------- Веб-сервер ----------
@@ -249,6 +268,16 @@ app.delete('/api/admin/guestbook/:id', requireAdmin, (req, res) => {
   res.json({ ok: true });
 });
 
+// ---------- Страницы новых сервисов ----------
+app.get('/projects', (_req, res) =>
+  res.sendFile(path.join(__dirname, 'pages', 'projects.html')));
+app.get('/stats', (_req, res) =>
+  res.sendFile(path.join(__dirname, 'pages', 'stats.html')));
+app.get('/profile', (_req, res) =>
+  res.sendFile(path.join(__dirname, 'pages', 'profile.html')));
+app.get('/about', (_req, res) =>
+  res.sendFile(path.join(__dirname, 'pages', 'about.html')));
+
 // ============================================================
 //  NeverPing — мониторинг сервисов экосистемы
 // ============================================================
@@ -349,6 +378,63 @@ io.on('connection', (socket) => {
 });
 
 // ============================================================
+//  Аналитика посещений (NeverStats)
+// ============================================================
+app.post('/api/track', (req, res) => {
+  const page = clean(req.body.page, 120) || '/';
+  const ref = clean(req.body.ref, 120);
+  const ua = String(req.get('user-agent') || '').slice(0, 200);
+  const ip = req.ip || 'local';
+  db.prepare('INSERT INTO visits (page, ref, ua, ip, ts) VALUES (?,?,?,?,?)')
+    .run(page, ref, ua, ip, Date.now());
+  res.json({ ok: true });
+});
+
+app.get('/api/admin/stats', requireAdmin, (req, res) => {
+  const days = Math.min(60, Math.max(1, Number(req.query.days) || 14));
+  const now = Date.now();
+  const since = now - (days - 1) * 86400000;
+  const map = {};
+  for (let i = days - 1; i >= 0; i--) map[dayKey(now - i * 86400000)] = 0;
+  db.prepare('SELECT ts FROM visits WHERE ts >= ?').all(since)
+    .forEach((r) => { const k = dayKey(r.ts); if (k in map) map[k]++; });
+
+  const total = db.prepare('SELECT COUNT(*) AS c FROM visits').get().c;
+  const uniq = db.prepare('SELECT COUNT(DISTINCT ip) AS c FROM visits').get().c;
+  const today = map[dayKey(now)] || 0;
+  const byRef = db.prepare(
+    "SELECT CASE WHEN ref = '' THEN 'прямой заход' ELSE ref END AS ref, COUNT(*) AS c FROM visits GROUP BY ref ORDER BY c DESC LIMIT 8"
+  ).all();
+  const byPage = db.prepare('SELECT page, COUNT(*) AS c FROM visits GROUP BY page ORDER BY c DESC LIMIT 8').all();
+  res.json({
+    total, uniq, today,
+    series: Object.entries(map).map(([day, c]) => ({ day, c })),
+    byRef, byPage
+  });
+});
+
+// ---------- Каталог проектов (NeverProjects) ----------
+app.get('/api/projects', (_req, res) => {
+  const rows = db.prepare('SELECT id, name, desc, link, status, ts FROM projects ORDER BY sort DESC, id ASC').all();
+  res.json(rows);
+});
+app.post('/api/admin/projects', requireAdmin, (req, res) => {
+  const name = clean(req.body.name, 50);
+  const desc = clean(req.body.desc, 200);
+  const link = clean(req.body.link, 300);
+  const status = clean(req.body.status, 20) || 'Онлайн';
+  const sort = Number(req.body.sort) || 0;
+  if (!name) return res.status(400).json({ error: 'Название обязательно.' });
+  const info = db.prepare('INSERT INTO projects (name, desc, link, status, sort, ts) VALUES (?,?,?,?,?,?)')
+    .run(name, desc, link, status, sort, Date.now());
+  res.json({ id: info.lastInsertRowid, name, desc, link, status, sort, ts: Date.now() });
+});
+app.delete('/api/admin/projects/:id', requireAdmin, (req, res) => {
+  db.prepare('DELETE FROM projects WHERE id = ?').run(Number(req.params.id));
+  res.json({ ok: true });
+});
+
+// ============================================================
 //  Модерация чата в админке (комнаты, сообщения, кто онлайн)
 // ============================================================
 app.get('/api/admin/rooms', requireAdmin, (_req, res) => {
@@ -376,6 +462,24 @@ app.delete('/api/admin/chat/:id', requireAdmin, (req, res) => {
   db.prepare('DELETE FROM chat WHERE id = ?').run(Number(req.params.id));
   res.json({ ok: true });
 });
+
+// ---------- Стартовое наполнение каталога проектов ----------
+if (db.prepare('SELECT COUNT(*) AS c FROM projects').get().c === 0) {
+  const seed = [
+    ['EcosystemNever', 'Главный сайт экосистемы NeverProduct', 'https://miras101208miras-cpu.github.io/EcosystemNever/', 'Онлайн', 10],
+    ['NeverNight Portfolio', 'Портфолио NeverNight со всеми проектами и демо', 'https://miras101208miras-cpu.github.io/NeverNight-Portfolio/', 'Онлайн', 9],
+    ['Demon Slayer', 'Фан-сайт по «Клинку, рассекающему демонов»', 'https://miras101208miras-cpu.github.io/NeverProduct-Demon-Slayer/', 'Онлайн', 8],
+    ['NeverParty', 'Смотровая вечеринка — смотрите вместе', 'https://miras101208miras-cpu.github.io/EcosystemNever/party/index.html', 'Онлайн', 7],
+    ['NeverChat', 'Анонимный чат в реальном времени', '/chat', 'Бета', 6],
+    ['NeverWall', 'Стена идей с голосованием', '/wall', 'Бета', 5],
+    ['NeverGuestbook', 'Гостевая книга экосистемы', '/guestbook', 'Бета', 4],
+    ['NeverPing', 'Мониторинг сервисов', '/status', 'Бета', 3],
+    ['Telegram-бот', 'Бот экосистемы @ecosystem_never_bot', 'https://t.me/ecosystem_never_bot', 'Онлайн', 2]
+  ];
+  const ins = db.prepare('INSERT INTO projects (name, desc, link, status, sort, ts) VALUES (?,?,?,?,?,?)');
+  const t = Date.now();
+  seed.forEach((s) => ins.run(s[0], s[1], s[2], s[3], s[4], t));
+}
 
 // ---------- Запуск ----------
 server.listen(PORT, () => {

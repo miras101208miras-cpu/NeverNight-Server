@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NeverAbout — О экосистеме EcosystemNever</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Montserrat:wght@600;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    :root { --bg:#04060a; --card:rgba(16,23,38,0.7); --border:rgba(255,255,255,0.08); --cyan:#00f0ff; --purple:#a855f7; --muted:#94a3b8; }
+    * { box-sizing:border-box; margin:0; padding:0; }
+    body { background:var(--bg); color:#f8fafc; font-family:'Montserrat',sans-serif; min-height:100vh; padding:24px; display:flex; flex-direction:column; align-items:center;
+      background-image:linear-gradient(rgba(255,255,255,0.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,0.025) 1px,transparent 1px); background-size:50px 50px; }
+    .glow { position:fixed; top:-20%; left:50%; transform:translateX(-50%); width:70vw; height:50vh; z-index:-1; pointer-events:none; background:radial-gradient(circle,rgba(0,240,255,0.12),rgba(168,85,247,0.12),transparent 70%); filter:blur(95px); }
+    .topbar { width:100%; max-width:860px; display:flex; align-items:center; justify-content:space-between; margin-bottom:36px; gap:12px; flex-wrap:wrap; }
+    .brand { display:flex; align-items:center; gap:10px; text-decoration:none; color:#fff; }
+    .brand-logo { width:38px; height:38px; border-radius:10px; background:rgba(0,240,255,0.08); border:1px solid rgba(0,240,255,0.45); display:flex; align-items:center; justify-content:center; font-size:1.1rem; box-shadow:0 0 15px rgba(0,240,255,0.35); }
+    .brand-title { font-family:'Syne',sans-serif; font-weight:800; font-size:1.05rem; }
+    .brand-title span { color:var(--cyan); }
+    .back-btn { padding:9px 18px; border-radius:20px; text-decoration:none; color:var(--cyan); border:1px solid rgba(0,240,255,0.35); font-size:0.72rem; font-weight:700; letter-spacing:1px; transition:all 0.3s; font-family:'JetBrains Mono',monospace; }
+    .back-btn:hover { background:rgba(0,240,255,0.12); box-shadow:0 0 15px rgba(0,240,255,0.4); }
+    .wrap { width:100%; max-width:860px; }
+    .tag { font-family:'JetBrains Mono',monospace; font-size:0.75rem; color:var(--cyan); letter-spacing:3px; text-transform:uppercase; margin-bottom:12px; }
+    h1 { font-family:'Syne',sans-serif; font-size:clamp(2rem,5.5vw,3rem); font-weight:800; margin-bottom:14px; }
+    h1 span { background:linear-gradient(135deg,var(--cyan),var(--purple)); -webkit-background-clip:text; -webkit-text-fill-color:transparent; }
+    .lead { color:var(--muted); font-size:1rem; line-height:1.7; margin-bottom:30px; max-width:680px; }
+    .section-title { font-family:'Syne',sans-serif; font-weight:800; font-size:1.35rem; margin:32px 0 16px; }
+    .panel { background:var(--card); border:1px solid var(--border); border-radius:18px; padding:24px; backdrop-filter:blur(16px); box-shadow:0 15px 40px rgba(0,0,0,0.5); }
+    .timeline { position:relative; padding-left:26px; }
+    .timeline::before { content:''; position:absolute; left:6px; top:6px; bottom:6px; width:2px; background:linear-gradient(180deg,var(--cyan),var(--purple)); }
+    .tl { position:relative; margin-bottom:22px; }
+    .tl:last-child { margin-bottom:0; }
+    .tl::before { content:''; position:absolute; left:-24px; top:5px; width:12px; height:12px; border-radius:50%; background:var(--bg); border:2px solid var(--cyan); box-shadow:0 0 12px rgba(0,240,255,0.6); }
+    .tl-date { font-family:'JetBrains Mono',monospace; font-size:0.68rem; color:var(--cyan); letter-spacing:1px; margin-bottom:3px; }
+    .tl-title { font-family:'Syne',sans-serif; font-weight:800; font-size:1.05rem; margin-bottom:4px; }
+    .tl-desc { color:var(--muted); font-size:0.85rem; line-height:1.55; }
+    .tech { display:flex; flex-wrap:wrap; gap:9px; }
+    .chip { font-family:'JetBrains Mono',monospace; font-size:0.72rem; padding:7px 14px; border-radius:16px; background:rgba(255,255,255,0.04); border:1px solid var(--border); color:#cbd5e1; }
+    .chip.hi { color:var(--cyan); border-color:rgba(0,240,255,0.35); background:rgba(0,240,255,0.06); }
+    .foot { margin-top:36px; font-family:'JetBrains Mono',monospace; font-size:0.7rem; color:#475569; letter-spacing:1px; text-align:center; }
+  </style>
+</head>
+<body>
+  <div class="glow"></div>
+  <div class="topbar">
+    <a href="/" class="brand"><div class="brand-logo">♾️</div><div class="brand-title">Never<span>About</span></div></a>
+    <a href="/" class="back-btn">← НА ХАБ</a>
+  </div>
+  <div class="wrap">
+    <div class="tag">// О проекте</div>
+    <h1>Экосистема <span>EcosystemNever</span></h1>
+    <p class="lead">EcosystemNever — это моя личная экосистема сайтов, сервисов и ботов. Я собрал её с нуля: от статичных страниц на GitHub Pages до полноценного Node.js-сервера с чатом в реальном времени, базой данных и Telegram-уведомлениями. Всё в едином неоновом стиле.</p>
+
+    <div class="section-title">🗺 Как развивалась</div>
+    <div class="panel">
+      <div class="timeline">
+        <div class="tl"><div class="tl-date">Шаг 1</div><div class="tl-title">Первые сайты</div><div class="tl-desc">Начал с фан-сайтов и лендингов на GitHub Pages — так появились EcosystemNever и Demon Slayer.</div></div>
+        <div class="tl"><div class="tl-date">Шаг 2</div><div class="tl-title">Свои продукты</div><div class="tl-desc">Собрал NeverParty для совместного просмотра и Telegram-бота экосистемы.</div></div>
+        <div class="tl"><div class="tl-date">Шаг 3</div><div class="tl-title">Портфолио</div><div class="tl-desc">Сделал портфолио NeverNight со всеми проектами и демо-сервисами.</div></div>
+        <div class="tl"><div class="tl-date">Шаг 4</div><div class="tl-title">Собственный сервер</div><div class="tl-desc">Написал Node.js-сервер: чат (Socket.IO), гостевая книга, стена идей, мониторинг и админ-панель с паролем.</div></div>
+        <div class="tl"><div class="tl-date">Шаг 5</div><div class="tl-title">Развитие и аналитика</div><div class="tl-desc">Добавил каталог проектов, страницу профиля, страницу о проекте и свою аналитику посещений.</div></div>
+      </div>
+    </div>
+
+    <div class="section-title">⚙️ Технологии</div>
+    <div class="panel">
+      <div class="tech">
+        <span class="chip hi">Node.js</span>
+        <span class="chip hi">Express</span>
+        <span class="chip hi">Socket.IO</span>
+        <span class="chip hi">SQLite</span>
+        <span class="chip">JavaScript</span>
+        <span class="chip">HTML5</span>
+        <span class="chip">CSS3</span>
+        <span class="chip">Canvas API</span>
+        <span class="chip">Telegram Bot API</span>
+        <span class="chip">GitHub Pages</span>
+        <span class="chip">Render</span>
+        <span class="chip">Git</span>
+      </div>
+    </div>
+
+    <div class="section-title">🧩 Из чего состоит</div>
+    <div class="panel">
+      <p style="color:var(--muted);font-size:0.9rem;line-height:1.7">
+        🌐 <b style="color:#f8fafc">Сайты</b> — EcosystemNever, портфолио, фан-сайт Demon Slayer, NeverParty.<br>
+        💬 <b style="color:#f8fafc">Сервисы</b> — NeverChat, NeverWall, NeverGuestbook, NeverPing.<br>
+        🗂 <b style="color:#f8fafc">Каталог и статистика</b> — NeverProjects, NeverStats, NeverProfile.<br>
+        🛡 <b style="color:#f8fafc">Управление</b> — NeverAdmin с паролем, модерацией и графиками.<br>
+        🤖 <b style="color:#f8fafc">Бот</b> — @ecosystem_never_bot с уведомлениями.
+      </p>
+    </div>
+
+    <div class="foot">EcosystemNever · собрано NeverNight с ♥</div>
+  </div>
+</body>
+</html>
