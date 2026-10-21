@@ -80,7 +80,7 @@ db.exec(`
     level INTEGER NOT NULL DEFAULT 1,
     ts INTEGER NOT NULL
   );
-  -- История диалогов с ассистентом (NeverAI)
+  -- История диалогов с ассистентом (Never Assist)
   CREATE TABLE IF NOT EXISTS ai_messages (
     id INTEGER PRIMARY KEY AUTOINCREMENT,
     session TEXT NOT NULL DEFAULT '',
@@ -328,7 +328,7 @@ const TARGETS = [
   { name: 'NeverProjects',    url: `${SELF_URL}/projects` },
   { name: 'NeverStats',       url: `${SELF_URL}/stats` },
   { name: 'NeverGame',        url: `${SELF_URL}/game` },
-  { name: 'NeverAI',          url: `${SELF_URL}/ai` },
+  { name: 'Never Assist',     url: `${SELF_URL}/ai` },
   { name: 'NeverMusic',       url: `${SELF_URL}/music` },
   { name: 'Telegram-бот',     url: 'https://t.me/ecosystem_never_bot' },
   { name: 'GitHub',           url: 'https://github.com/miras101208miras-cpu' }
@@ -504,16 +504,16 @@ app.delete('/api/admin/game/:id', requireAdmin, (req, res) => {
 });
 
 // ============================================================
-//  NeverAI — чат-ассистент экосистемы (на правилах, без внешних API)
+//  Never Assist — ассистент экосистемы (на правилах + поиск треков)
 // ============================================================
 const AI_KB = [
   {
     keys: ['привет', 'здравств', 'хай', 'hello', 'hi', 'ку'],
-    a: 'Привет! 👋 Я NeverAI — ассистент экосистемы EcosystemNever. Спроси меня о проектах, хостинге, коде или о NeverNight.'
+    a: 'Привет! 👋 Я Never Assist — ассистент экосистемы EcosystemNever. Спроси меня о проектах, хостинге, коде или о NeverNight. Могу даже добавить трек в плейлист.'
   },
   {
     keys: ['кто ты', 'что ты', 'тебя зовут', 'твое имя', 'твоё имя'],
-    a: 'Я NeverAI — демо-ассистент экосистемы. Работаю на правилах прямо на сервере: без внешних API и ключей. Могу рассказать про проекты, технологии и подсказать команды.'
+    a: 'Я Never Assist — ассистент экосистемы. Отвечаю на вопросы про проекты и технологии, а ещё умею сам находить треки и добавлять их в плейлист NeverMusic — просто напиши «добавь трек <название>».'
   },
   {
     keys: ['nevernight', 'никого', 'автор', 'владел', 'создател', 'кто сделал'],
@@ -585,7 +585,11 @@ const AI_KB = [
   },
   {
     keys: ['помощь', 'help', 'что умеешь', 'команд'],
-    a: 'Я умею рассказывать про:\n• проекты — «какие есть проекты»\n• сервисы — чат, гостевая, стена, статус\n• технологии и хостинг\n• контакты NeverNight\n• админку и пароль\nСпрашивай своими словами!'
+    a: 'Я умею:\n• рассказать про проекты, сервисы, технологии\n• подсказать контакты NeverNight\n• добавить трек в плейлист — просто напиши «добавь трек <название>», и я сам найду его и добавлю в NeverMusic 🎵\nСпрашивай своими словами!'
+  },
+  {
+    keys: ['never assist', 'neverassist', 'ассистент', 'помощник'],
+    a: '🤖 Я Never Assist — ассистент экосистемы. Могу ответить на вопросы и сам найти и добавить трек: напиши «добавь трек <название>» — и он появится в плейлисте NeverMusic.'
   }
 ];
 
@@ -605,15 +609,91 @@ function aiReply(text) {
   return 'Не понял запрос 🤔 Напиши «помощь» — покажу, о чём можно спросить.';
 }
 
-app.post('/api/ai', (req, res) => {
+// ============================================================
+//  Never Assist — ассистент, который сам ищет и добавляет треки
+// ============================================================
+// Ищем реальные превью треков через публичный iTunes Search API (без ключей).
+function looksLikeTrackRequest(q) {
+  return /(добав|закин|включи в плейлист|положи|найди трек|найти трек|добавь песн|добавь музык|add track)/i.test(q);
+}
+
+// Достаём название трека из фразы: убираем команду и служебные слова
+function extractQuery(q) {
+  return q
+    .replace(/(пожалуйста|плиз|мне|трек|песню|песн|музыку|музык|в плейлист|плейлист|добавь|добавить|закинь|закинь|положи|найди|найти|add track|add|трека|песни)/gi, ' ')
+    .replace(/[«»"'`]/g, ' ')
+    .replace(/\s+/g, ' ')
+    .trim();
+}
+
+async function searchTrack(query) {
+  const url = 'https://itunes.apple.com/search?media=music&entity=song&limit=5&term=' + encodeURIComponent(query);
+  const r = await fetch(url, { signal: AbortSignal.timeout(9000) });
+  if (!r.ok) throw new Error('search failed ' + r.status);
+  const data = await r.json();
+  const items = (data.results || []).filter((x) => x.previewUrl);
+  if (!items.length) return null;
+  // выбираем самый «релевантный» — первый с превью
+  const t = items[0];
+  return {
+    title: (t.trackName || query).slice(0, 80),
+    artist: (t.artistName || '').slice(0, 80),
+    url: t.previewUrl,
+    cover: (t.artworkUrl100 || '').replace('100x100', '300x300'),
+    album: t.collectionName || ''
+  };
+}
+
+async function assistAddTrack(text) {
+  const query = extractQuery(text);
+  if (!query || query.length < 2) {
+    return 'Напиши название трека, который добавить — например: «добавь трек Blinding Lights».';
+  }
+  let t;
+  try {
+    t = await searchTrack(query);
+  } catch (e) {
+    return '⚠ Не получилось поискать трек — попробуй ещё раз чуть позже.';
+  }
+  if (!t) {
+    return `Не нашёл трек «${query}» 🤔 Попробуй написать название точнее — исполнителя и песню.`;
+  }
+  const ts = Date.now();
+  const info = db.prepare('INSERT INTO tracks (title, artist, url, cover, sort, ts) VALUES (?,?,?,?,?,?)')
+    .run(t.title, t.artist, t.url, t.cover, 0, ts);
+  notifyTelegram(`🎵 Never Assist добавил трек: «${t.title}» — ${t.artist}`);
+  return {
+    answer: `🎵 Добавил в плейлист: «${t.title}» — ${t.artist}\nЭто превью трека, послушать можно на странице NeverMusic: /music`,
+    track: { id: info.lastInsertRowid, title: t.title, artist: t.artist, url: t.url, cover: t.cover },
+    added: true
+  };
+}
+
+app.post('/api/ai', async (req, res) => {
   const text = clean(req.body.text, 600);
   const session = clean(req.body.session, 40) || 'anon';
-  const answer = aiReply(text);
   const ts = Date.now();
   const ins = db.prepare('INSERT INTO ai_messages (session, role, text, ts) VALUES (?,?,?,?)');
   ins.run(session, 'user', text, ts);
+
+  let answer = null;
+  let track = null;
+
+  // Never Assist: если просят добавить трек — ищем и добавляем сами
+  if (looksLikeTrackRequest(text)) {
+    const r = await assistAddTrack(text);
+    if (typeof r === 'string') {
+      answer = r;
+    } else {
+      answer = r.answer;
+      track = r.track;
+    }
+  } else {
+    answer = aiReply(text);
+  }
+
   ins.run(session, 'ai', answer, ts + 1);
-  res.json({ answer });
+  res.json({ answer, track });
 });
 
 app.get('/api/ai/history', (req, res) => {
@@ -711,7 +791,7 @@ if (db.prepare('SELECT COUNT(*) AS c FROM projects').get().c === 0) {
     ['Demon Slayer', 'Фан-сайт по «Клинку, рассекающему демонов»', 'https://miras101208miras-cpu.github.io/NeverProduct-Demon-Slayer/', 'Онлайн', 8],
     ['NeverParty', 'Смотровая вечеринка — смотрите вместе', 'https://miras101208miras-cpu.github.io/EcosystemNever/party/index.html', 'Онлайн', 7],
     ['NeverGame', 'Неоновая мини-игра с таблицей рекордов', '/game', 'Онлайн', 7],
-    ['NeverAI', 'Чат-ассистент экосистемы на правилах', '/ai', 'Онлайн', 7],
+    ['Never Assist', 'Ассистент экосистемы: сам ищет и добавляет треки', '/ai', 'Онлайн', 7],
     ['NeverMusic', 'Музыкальный плеер с общим плейлистом', '/music', 'Онлайн', 7],
     ['NeverChat', 'Анонимный чат в реальном времени', '/chat', 'Бета', 6],
     ['NeverWall', 'Стена идей с голосованием', '/wall', 'Бета', 5],

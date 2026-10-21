@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>NeverAI — Ассистент EcosystemNever</title>
+  <title>Never Assist — Ассистент EcosystemNever</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Montserrat:wght@600;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
@@ -66,6 +66,12 @@
     .send-btn:hover { transform: translateY(-2px); }
     .send-btn:disabled { opacity: 0.5; cursor: default; transform: none; }
 
+    .track-open {
+      align-self: flex-start; margin-left: 40px; padding: 8px 16px; border-radius: 14px; text-decoration: none;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.74rem; font-weight: 700; color: #04060a;
+      background: linear-gradient(135deg, var(--cyan), var(--purple));
+    }
+
     @media (max-width: 640px) {
       .chat { height: 400px; padding: 14px; }
       .msg { max-width: 90%; }
@@ -77,7 +83,7 @@
 <body>
   <div class="glow"></div>
   <div class="topbar">
-    <a href="/" class="brand"><div class="brand-logo">🤖</div><div class="brand-title">Never<span>AI</span></div></a>
+    <a href="/" class="brand"><div class="brand-logo">🤖</div><div class="brand-title">Never<span>Assist</span></div></a>
     <div class="nav-links">
       <a href="/projects" class="back-btn">🗂 ПРОЕКТЫ</a>
       <a href="/" class="back-btn">← НА ХАБ</a>
@@ -87,15 +93,15 @@
   <div class="wrap">
     <div>
       <div class="tag">// Ассистент экосистемы</div>
-      <h1>Never<span>AI</span></h1>
-      <p class="sub">Задай вопрос об экосистеме, проектах, технологиях или о NeverNight — ассистент ответит.</p>
+      <h1>Never<span>Assist</span></h1>
+      <p class="sub">Задай вопрос об экосистеме — ассистент ответит. А если напишешь «добавь трек &lt;название&gt;», он сам найдёт его и добавит в плейлист NeverMusic.</p>
     </div>
 
     <div class="chat-shell">
       <div class="ai-head">
         <div class="ai-avatar">🤖</div>
         <div>
-          <div class="ai-name">NeverAI</div>
+          <div class="ai-name">Never Assist</div>
           <div class="ai-status">онлайн · отвечает мгновенно</div>
         </div>
       </div>
@@ -103,11 +109,11 @@
       <div class="chat" id="chat"></div>
 
       <div class="chips" id="chips">
+        <button class="chip-btn" data-q="добавь трек Blinding Lights">🎵 Добавить трек</button>
         <button class="chip-btn" data-q="Какие есть проекты?">🗂 Какие есть проекты?</button>
         <button class="chip-btn" data-q="Что умеешь?">💡 Что умеешь?</button>
         <button class="chip-btn" data-q="Как связаться с NeverNight?">📬 Контакты</button>
         <button class="chip-btn" data-q="На чём написан сервер?">⚙️ Технологии</button>
-        <button class="chip-btn" data-q="Что такое NeverMusic?">🎵 NeverMusic</button>
       </div>
 
       <form class="composer" id="composer">
@@ -116,7 +122,7 @@
       </form>
     </div>
 
-    <div class="foot">NeverAI · EcosystemNever</div>
+    <div class="foot">Never Assist · EcosystemNever</div>
   </div>
 
   <link rel="stylesheet" href="/style.css">
@@ -174,6 +180,16 @@
       await new Promise((res) => setTimeout(res, 350));
       typing.remove();
       addMsg('ai', d.answer || 'Что-то пошло не так 🤔');
+      if (d.track) {
+        const a = document.createElement('a');
+        a.className = 'track-open';
+        a.href = '/music';
+        a.target = '_blank';
+        a.rel = 'noopener';
+        a.textContent = '▶ Открыть в NeverMusic';
+        chat.appendChild(a);
+        chat.scrollTop = chat.scrollHeight;
+      }
     } catch (e) {
       typing.remove();
       addMsg('ai', '⚠ Сервер недоступен. Попробуй позже.');
@@ -198,10 +214,10 @@
       const h = await (await fetch('/api/ai/history?session=' + encodeURIComponent(session))).json();
       if (h.length) { h.forEach((m) => addMsg(m.role, m.text)); }
       else {
-        addMsg('ai', 'Привет! 👋 Я NeverAI — ассистент экосистемы EcosystemNever. Спроси про проекты, сервисы, технологии или контакты. Можно нажать на подсказку ниже.');
+        addMsg('ai', 'Привет! 👋 Я Never Assist — ассистент экосистемы EcosystemNever. Спроси про проекты, сервисы или контакты. А ещё напиши «добавь трек <название>» — я сам найду его и добавлю в плейлист NeverMusic 🎵');
       }
     } catch (e) {
-      addMsg('ai', 'Привет! 👋 Я NeverAI. Спроси меня про экосистему EcosystemNever.');
+      addMsg('ai', 'Привет! 👋 Я Never Assist — ассистент экосистемы EcosystemNever.');
     }
     input.focus();
   })();

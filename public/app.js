@@ -80,9 +80,160 @@
     } catch (e) {}
   }
 
+  // ============================================================
+  //  Never Assist — ассистент в нижнем углу на всех страницах
+  // ============================================================
+  function apiBase() {
+    var host = location.hostname;
+    var isServer = host.indexOf('onrender') > -1 || host.indexOf('is-a.dev') > -1 || host === 'localhost' || host === '127.0.0.1';
+    return isServer ? '' : 'https://nevernight-server.onrender.com';
+  }
+
+  function buildAssistant() {
+    if (document.getElementById('na-assist')) return;
+
+    var base = apiBase();
+
+    var wrap = document.createElement('div');
+    wrap.id = 'na-assist';
+
+    // Кнопка (лаунчер)
+    var fab = document.createElement('button');
+    fab.id = 'na-fab';
+    fab.type = 'button';
+    fab.setAttribute('aria-label', 'Never Assist');
+    fab.innerHTML = '<span class="na-fab-ico">🤖</span>';
+    fab.addEventListener('click', function () { openPanel(); });
+
+    // Панель
+    var panel = document.createElement('div');
+    panel.id = 'na-panel';
+    panel.innerHTML =
+      '<div class="na-head">' +
+        '<div class="na-ava">🤖</div>' +
+        '<div class="na-head-txt"><div class="na-name">Never Assist</div><div class="na-sub">онлайн · найдёт и добавит трек</div></div>' +
+        '<button class="na-close" type="button" aria-label="Закрыть">✕</button>' +
+      '</div>' +
+      '<div class="na-chat" id="na-chat"></div>' +
+      '<div class="na-chips">' +
+        '<button class="na-chip" data-q="добавь трек Blinding Lights">🎵 Добавить трек</button>' +
+        '<button class="na-chip" data-q="Какие есть проекты?">🗂 Проекты</button>' +
+        '<button class="na-chip" data-q="Как связаться?">📬 Контакты</button>' +
+      '</div>' +
+      '<form class="na-form" id="na-form">' +
+        '<input id="na-input" placeholder="Напиши вопрос или «добавь трек …»" autocomplete="off" maxlength="500">' +
+        '<button type="submit" id="na-send" aria-label="Отправить">➤</button>' +
+      '</form>';
+
+    wrap.appendChild(panel);
+    wrap.appendChild(fab);
+    document.body.appendChild(wrap);
+
+    var chat = panel.querySelector('#na-chat');
+    var input = panel.querySelector('#na-input');
+    var sendBtn = panel.querySelector('#na-send');
+    var greeted = false;
+
+    function esc(s) {
+      return String(s).replace(/[&<>"']/g, function (c) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c];
+      });
+    }
+
+    function addMsg(role, text) {
+      var d = document.createElement('div');
+      d.className = 'na-msg ' + role;
+      d.innerHTML =
+        '<div class="na-bub">' + esc(text).replace(/\n/g, '<br>') + '</div>';
+      chat.appendChild(d);
+      chat.scrollTop = chat.scrollHeight;
+      return d;
+    }
+
+    function typing() {
+      var d = document.createElement('div');
+      d.className = 'na-msg ai';
+      d.innerHTML = '<div class="na-bub"><span class="na-dots"><i></i><i></i><i></i></span></div>';
+      chat.appendChild(d);
+      chat.scrollTop = chat.scrollHeight;
+      return d;
+    }
+
+    var session = (function () {
+      try {
+        var s = localStorage.getItem('nn_ai_session');
+        if (!s) { s = 'w' + Math.random().toString(36).slice(2) + Date.now().toString(36); localStorage.setItem('nn_ai_session', s); }
+        return s;
+      } catch (e) { return 'anon'; }
+    })();
+
+    function greet() {
+      if (greeted) return;
+      greeted = true;
+      addMsg('ai', 'Привет! 👋 Я Never Assist — ассистент EcosystemNever.\nСпроси про проекты, сервисы или контакты. А ещё напиши «добавь трек <название>» — я сам найду его и добавлю в плейлист 🎵');
+    }
+
+    async function ask(text) {
+      text = (text || '').trim();
+      if (!text) return;
+      addMsg('user', text);
+      input.value = '';
+      sendBtn.disabled = true;
+      var t = typing();
+      try {
+        var r = await fetch(base + '/api/ai', {
+          method: 'POST', headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ text: text, session: session })
+        });
+        var d = await r.json();
+        t.remove();
+        addMsg('ai', d.answer || 'Что-то пошло не так 🤔');
+        if (d.track) {
+          var link = document.createElement('a');
+          link.className = 'na-track-link';
+          link.href = base + '/music';
+          link.target = '_blank';
+          link.rel = 'noopener';
+          link.textContent = '▶ Открыть в NeverMusic';
+          chat.appendChild(link);
+          chat.scrollTop = chat.scrollHeight;
+        }
+      } catch (e) {
+        t.remove();
+        addMsg('ai', '⚠ Не получилось связаться с сервером. Попробуй позже.');
+      }
+      sendBtn.disabled = false;
+      input.focus();
+    }
+
+    panel.querySelector('.na-close').addEventListener('click', function () { closePanel(); });
+    panel.querySelector('#na-form').addEventListener('submit', function (e) { e.preventDefault(); ask(input.value); });
+    panel.querySelector('.na-chips').addEventListener('click', function (e) {
+      var b = e.target.closest ? e.target.closest('.na-chip') : null;
+      if (b) ask(b.getAttribute('data-q'));
+    });
+  }
+
+  function openPanel() {
+    var p = document.getElementById('na-panel');
+    var f = document.getElementById('na-fab');
+    if (!p) return;
+    p.classList.add('open');
+    if (f) f.classList.add('hide');
+    var i = document.getElementById('na-input');
+    if (i) setTimeout(function () { i.focus(); }, 120);
+  }
+  function closePanel() {
+    var p = document.getElementById('na-panel');
+    var f = document.getElementById('na-fab');
+    if (p) p.classList.remove('open');
+    if (f) f.classList.remove('hide');
+  }
+
   function init() {
     placeButtons();
     track();
+    buildAssistant();
   }
 
   if (document.readyState === 'loading') {
