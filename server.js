@@ -89,6 +89,9 @@ app.get('/', (_req, res) =>
 // Health-check для хостинга / мониторинга
 app.get('/health', (_req, res) => res.json({ ok: true, uptime: process.uptime() }));
 
+// Общие файлы экосистемы: /style.css и /app.js
+app.use(express.static(path.join(__dirname, 'public')));
+
 // Статика: портфолио лежит в родительской папке (при деплое сервера её может не быть)
 if (fs.existsSync(ROOT)) {
   app.use(express.static(ROOT));

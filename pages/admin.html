@@ -148,6 +148,7 @@
     }
     .lock-btn:hover { transform: translateY(-2px); box-shadow: 0 10px 25px rgba(0,240,255,0.35); }
   </style>
+  <link rel="stylesheet" href="/style.css">
 </head>
 <body>
   <div class="glow"></div>
@@ -448,5 +449,6 @@
   setInterval(() => { if (PASS && $('lock').style.display !== 'flex') loadMain().catch(() => {}); }, 15000);
   setInterval(() => { if (PASS && $('lock').style.display !== 'flex') loadOnline().catch(() => {}); }, 5000);
 </script>
+  <script src="/app.js" defer></script>
 </body>
 </html>

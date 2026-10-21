@@ -37,6 +37,7 @@
     .go { font-family:'JetBrains Mono',monospace; font-size:0.72rem; color:var(--cyan); }
     .empty { text-align:center; color:#64748b; padding:40px; border:1px dashed var(--border); border-radius:12px; grid-column:1/-1; }
   </style>
+  <link rel="stylesheet" href="/style.css">
 </head>
 <body>
   <div class="glow"></div>
@@ -72,5 +73,6 @@
     rows.forEach((p) => g.appendChild(card(p)));
   }).catch(() => { document.getElementById('grid').innerHTML = '<div class="empty">⚠ Сервер офлайн</div>'; });
 </script>
+  <script src="/app.js" defer></script>
 </body>
 </html>

@@ -32,6 +32,7 @@
     .foot { margin-top:40px; font-family:'JetBrains Mono',monospace; font-size:0.7rem; color:#475569; letter-spacing:1px; }
     .foot a { color:var(--purple); text-decoration:none; }
   </style>
+  <link rel="stylesheet" href="/style.css">
 </head>
 <body>
   <div class="glow"></div>
@@ -104,5 +105,6 @@
       body: JSON.stringify({ page: location.pathname, ref: document.referrer ? new URL(document.referrer).hostname : '' })
     }).catch(() => {});
   </script>
+  <script src="/app.js" defer></script>
 </body>
 </html>
