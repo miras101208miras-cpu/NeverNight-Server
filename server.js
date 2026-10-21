@@ -72,6 +72,14 @@ db.exec(`
     ip TEXT NOT NULL DEFAULT '',
     ts INTEGER NOT NULL
   );
+  -- Рекорды мини-игры (NeverGame)
+  CREATE TABLE IF NOT EXISTS game_scores (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    name TEXT NOT NULL DEFAULT 'Гость',
+    score INTEGER NOT NULL DEFAULT 0,
+    level INTEGER NOT NULL DEFAULT 1,
+    ts INTEGER NOT NULL
+  );
 `);
 
 // ---------- Веб-сервер ----------
@@ -280,6 +288,8 @@ app.get('/profile', (_req, res) =>
   res.sendFile(path.join(__dirname, 'pages', 'profile.html')));
 app.get('/about', (_req, res) =>
   res.sendFile(path.join(__dirname, 'pages', 'about.html')));
+app.get('/game', (_req, res) =>
+  res.sendFile(path.join(__dirname, 'pages', 'game.html')));
 
 // ============================================================
 //  NeverPing — мониторинг сервисов экосистемы
@@ -295,6 +305,7 @@ const TARGETS = [
   { name: 'NeverGuestbook',   url: `${SELF_URL}/guestbook` },
   { name: 'NeverProjects',    url: `${SELF_URL}/projects` },
   { name: 'NeverStats',       url: `${SELF_URL}/stats` },
+  { name: 'NeverGame',        url: `${SELF_URL}/game` },
   { name: 'Telegram-бот',     url: 'https://t.me/ecosystem_never_bot' },
   { name: 'GitHub',           url: 'https://github.com/miras101208miras-cpu' }
 ];
@@ -444,6 +455,31 @@ app.delete('/api/admin/projects/:id', requireAdmin, (req, res) => {
 });
 
 // ============================================================
+//  Мини-игра (NeverGame) — таблица рекордов
+// ============================================================
+app.get('/api/game/scores', (_req, res) => {
+  const rows = db.prepare(
+    'SELECT id, name, score, level, ts FROM game_scores ORDER BY score DESC, ts ASC LIMIT 20'
+  ).all();
+  res.json(rows);
+});
+
+app.post('/api/game/score', (req, res) => {
+  const name = clean(req.body.name, 20) || 'Гость';
+  const score = Math.max(0, Math.min(1000000, Number(req.body.score) || 0));
+  const level = Math.max(1, Math.min(999, Number(req.body.level) || 1));
+  const info = db.prepare('INSERT INTO game_scores (name, score, level, ts) VALUES (?,?,?,?)')
+    .run(name, score, level, Date.now());
+  const rank = db.prepare('SELECT COUNT(*) AS c FROM game_scores WHERE score > ?').get(score).c + 1;
+  res.json({ id: info.lastInsertRowid, name, score, level, rank });
+});
+
+app.delete('/api/admin/game/:id', requireAdmin, (req, res) => {
+  db.prepare('DELETE FROM game_scores WHERE id = ?').run(Number(req.params.id));
+  res.json({ ok: true });
+});
+
+// ============================================================
 //  Модерация чата в админке (комнаты, сообщения, кто онлайн)
 // ============================================================
 app.get('/api/admin/rooms', requireAdmin, (_req, res) => {
@@ -479,6 +515,7 @@ if (db.prepare('SELECT COUNT(*) AS c FROM projects').get().c === 0) {
     ['NeverNight Portfolio', 'Портфолио NeverNight со всеми проектами и демо', 'https://miras101208miras-cpu.github.io/NeverNight-Portfolio/', 'Онлайн', 9],
     ['Demon Slayer', 'Фан-сайт по «Клинку, рассекающему демонов»', 'https://miras101208miras-cpu.github.io/NeverProduct-Demon-Slayer/', 'Онлайн', 8],
     ['NeverParty', 'Смотровая вечеринка — смотрите вместе', 'https://miras101208miras-cpu.github.io/EcosystemNever/party/index.html', 'Онлайн', 7],
+    ['NeverGame', 'Неоновая мини-игра с таблицей рекордов', '/game', 'Онлайн', 7],
     ['NeverChat', 'Анонимный чат в реальном времени', '/chat', 'Бета', 6],
     ['NeverWall', 'Стена идей с голосованием', '/wall', 'Бета', 5],
     ['NeverGuestbook', 'Гостевая книга экосистемы', '/guestbook', 'Бета', 4],

@@ -214,6 +214,11 @@
       <div class="items" id="projList"><div class="empty">Загрузка...</div></div>
     </div>
 
+    <div class="section-title">🎮 Рекорды NeverGame</div>
+    <div class="panel">
+      <div class="items" id="gameList"><div class="empty">Загрузка...</div></div>
+    </div>
+
     <div class="section-title">💡 Идеи <span class="count-badge" id="ideasBadge">0</span></div>
     <div class="items" id="ideas"><div class="empty">Загрузка...</div></div>
 
@@ -439,7 +444,30 @@
     loadProjects();
   });
 
-  async function loadAll() { try { await Promise.all([loadMain(), loadActivity(), loadChat(), loadProjects()]); } catch (e) { if (e.message !== '401') console.error(e); } }
+  // ---------- Рекорды NeverGame ----------
+  function gameNode(r, rank) {
+    const div = document.createElement('div'); div.className = 'item';
+    const body = document.createElement('div'); body.className = 'item-body';
+    const text = document.createElement('div'); text.className = 'item-text';
+    text.textContent = '#' + rank + '  ' + r.name + ' — ' + r.score + ' очков';
+    const meta = document.createElement('div'); meta.className = 'item-meta';
+    meta.textContent = 'id ' + r.id + ' · уровень ' + r.level + ' · ' + new Date(r.ts).toLocaleString('ru-RU');
+    body.append(text, meta);
+    const del = document.createElement('button'); del.className = 'del-btn'; del.textContent = '✕ Удалить';
+    del.onclick = async () => {
+      if (!confirm('Удалить рекорд «' + r.name + '»?')) return;
+      await api('/api/admin/game/' + r.id, { method: 'DELETE' });
+      div.remove();
+    };
+    div.append(body, del); return div;
+  }
+  async function loadGame() {
+    const rows = await (await fetch('/api/game/scores')).json();
+    $('gameList').innerHTML = rows.length ? '' : '<div class="empty">Рекордов пока нет</div>';
+    rows.forEach((r, i) => $('gameList').appendChild(gameNode(r, i + 1)));
+  }
+
+  async function loadAll() { try { await Promise.all([loadMain(), loadActivity(), loadChat(), loadProjects(), loadGame()]); } catch (e) { if (e.message !== '401') console.error(e); } }
 
   (async function init() {
     if (PASS && await tryAuth(PASS)) { hideLock(); loadAll(); }
