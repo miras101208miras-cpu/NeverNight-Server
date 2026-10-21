@@ -1,1 +1,0 @@
-Telegram-уведомление не отправлено: The operation was aborted due to timeout

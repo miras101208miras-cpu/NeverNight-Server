@@ -6,3 +6,6 @@ data/
 *.db-wal
 .env
 npm-debug.log*
+
+err.txt
+out.txt
