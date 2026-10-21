@@ -94,7 +94,7 @@
     <div>
       <div class="tag">// Ассистент экосистемы</div>
       <h1>Never<span>Assist</span></h1>
-      <p class="sub">Задай вопрос об экосистеме — ассистент ответит. А если напишешь «добавь трек &lt;название&gt;», он сам найдёт его и добавит в плейлист NeverMusic.</p>
+      <p class="sub">Ассистент экосистемы EcosystemNever: отвечает на вопросы о проектах, технологиях и контактах. Умеет искать музыку — просто напиши «добавь трек &lt;название&gt;».</p>
     </div>
 
     <div class="chat-shell">
@@ -214,7 +214,7 @@
       const h = await (await fetch('/api/ai/history?session=' + encodeURIComponent(session))).json();
       if (h.length) { h.forEach((m) => addMsg(m.role, m.text)); }
       else {
-        addMsg('ai', 'Привет! 👋 Я Never Assist — ассистент экосистемы EcosystemNever. Спроси про проекты, сервисы или контакты. А ещё напиши «добавь трек <название>» — я сам найду его и добавлю в плейлист NeverMusic 🎵');
+        addMsg('ai', 'Привет! 👋 Я Never Assist — ассистент экосистемы EcosystemNever. Спроси о чём угодно: проекты, сервисы, технологии, контакты. А ещё я умею добавлять музыку — напиши «добавь трек <название>» 🎵');
       }
     } catch (e) {
       addMsg('ai', 'Привет! 👋 Я Never Assist — ассистент экосистемы EcosystemNever.');

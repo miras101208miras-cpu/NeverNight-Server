@@ -182,7 +182,7 @@
     panel.innerHTML =
       '<div class="na-head">' +
         '<div class="na-ava">🤖</div>' +
-        '<div class="na-head-txt"><div class="na-name">Never Assist</div><div class="na-sub">онлайн · найдёт и добавит трек</div></div>' +
+        '<div class="na-head-txt"><div class="na-name">Never Assist</div><div class="na-sub">онлайн · ассистент экосистемы</div></div>' +
         '<button class="na-close" type="button" aria-label="Закрыть">✕</button>' +
       '</div>' +
       '<div class="na-chat" id="na-chat"></div>' +
@@ -241,7 +241,7 @@
     function greet() {
       if (greeted) return;
       greeted = true;
-      addMsg('ai', 'Привет! 👋 Я Never Assist — ассистент EcosystemNever.\nСпроси про проекты, сервисы или контакты. А ещё напиши «добавь трек <название>» — я сам найду его и добавлю в плейлист 🎵');
+      addMsg('ai', 'Привет! 👋 Я Never Assist — ассистент EcosystemNever.\nСпроси меня о чём угодно: проекты, сервисы, технологии, контакты. А ещё я умею добавлять музыку — напиши «добавь трек <название>» 🎵');
     }
 
     async function ask(text) {

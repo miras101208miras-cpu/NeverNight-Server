@@ -509,11 +509,11 @@ app.delete('/api/admin/game/:id', requireAdmin, (req, res) => {
 const AI_KB = [
   {
     keys: ['привет', 'здравств', 'хай', 'hello', 'hi', 'ку'],
-    a: 'Привет! 👋 Я Never Assist — ассистент экосистемы EcosystemNever. Спроси меня о проектах, хостинге, коде или о NeverNight. Могу даже добавить трек в плейлист.'
+    a: 'Привет! 👋 Я Never Assist — ассистент экосистемы EcosystemNever. Спроси меня о чём угодно: проекты, сервисы, технологии, хостинг, код или NeverNight. А ещё могу добавить музыку в плейлист.'
   },
   {
     keys: ['кто ты', 'что ты', 'тебя зовут', 'твое имя', 'твоё имя'],
-    a: 'Я Never Assist — ассистент экосистемы. Отвечаю на вопросы про проекты и технологии, а ещё умею сам находить треки и добавлять их в плейлист NeverMusic — просто напиши «добавь трек <название>».'
+    a: 'Я Never Assist — ассистент экосистемы EcosystemNever. Отвечаю на вопросы про проекты, технологии и контакты, а ещё умею находить музыку и добавлять её в плейлист NeverMusic — просто напиши «добавь трек <название>».'
   },
   {
     keys: ['nevernight', 'никого', 'автор', 'владел', 'создател', 'кто сделал'],
@@ -585,11 +585,11 @@ const AI_KB = [
   },
   {
     keys: ['помощь', 'help', 'что умеешь', 'команд'],
-    a: 'Я умею:\n• рассказать про проекты, сервисы, технологии\n• подсказать контакты NeverNight\n• добавить трек в плейлист — просто напиши «добавь трек <название>», и я сам найду его и добавлю в NeverMusic 🎵\nСпрашивай своими словами!'
+    a: 'Я умею:\n• рассказать про проекты, сервисы и технологии\n• подсказать контакты NeverNight\n• ответить про хостинг, базу данных и стек\n• добавить музыку — напиши «добавь трек <название>», и я найду его и добавлю в NeverMusic 🎵\nСпрашивай своими словами!'
   },
   {
     keys: ['never assist', 'neverassist', 'ассистент', 'помощник'],
-    a: '🤖 Я Never Assist — ассистент экосистемы. Могу ответить на вопросы и сам найти и добавить трек: напиши «добавь трек <название>» — и он появится в плейлисте NeverMusic.'
+    a: '🤖 Я Never Assist — ассистент экосистемы EcosystemNever. Отвечаю на вопросы про проекты, технологии, хостинг и контакты. Могу и музыку добавить: «добавь трек <название>» — и он появится в NeverMusic.'
   }
 ];
 
@@ -611,37 +611,110 @@ function aiReply(text) {
 
 // ============================================================
 //  Never Assist — ассистент, который сам ищет и добавляет треки
+//  Источники: Deezer (основной, без ключей) → iTunes (запасной)
+//             → Spotify (если заданы ключи SPOTIFY_ID / SPOTIFY_SECRET)
 // ============================================================
-// Ищем реальные превью треков через публичный iTunes Search API (без ключей).
 function looksLikeTrackRequest(q) {
-  return /(добав|закин|включи в плейлист|положи|найди трек|найти трек|добавь песн|добавь музык|add track)/i.test(q);
+  // Просим что-то добавить/найти именно в музыку (а не общий вопрос про музыку).
+  // \w в JS не покрывает кириллицу — используем явные классы.
+  return /(добав[а-яё]*|закин[а-яё]*|положи|поставь)\s+(пожалуйста\s+)?(трек|песн[а-яё]*|музык[а-яё]*|композиц[а-яё]*)/i.test(q)
+    || /(найди|найти|подбер[а-яё]*)\s+(трек|песн[а-яё]*|музык[а-яё]*)/i.test(q)
+    || /add\s+track/i.test(q);
 }
 
 // Достаём название трека из фразы: убираем команду и служебные слова
 function extractQuery(q) {
   return q
-    .replace(/(пожалуйста|плиз|мне|трек|песню|песн|музыку|музык|в плейлист|плейлист|добавь|добавить|закинь|закинь|положи|найди|найти|add track|add|трека|песни)/gi, ' ')
+    .replace(/(пожалуйста|плиз|мне|трек|песню|песн|музыку|музык|в плейлист|плейлист|добавь|добавить|закинь|положи|поставь|найди|найти|add track|add|трека|песни)/gi, ' ')
     .replace(/[«»"'`]/g, ' ')
     .replace(/\s+/g, ' ')
     .trim();
 }
 
-async function searchTrack(query) {
-  const url = 'https://itunes.apple.com/search?media=music&entity=song&limit=5&term=' + encodeURIComponent(query);
-  const r = await fetch(url, { signal: AbortSignal.timeout(9000) });
-  if (!r.ok) throw new Error('search failed ' + r.status);
+// --- Deezer (основной источник, без ключей) ---
+async function searchDeezer(query) {
+  const r = await fetch('https://api.deezer.com/search?limit=8&q=' + encodeURIComponent(query), { signal: AbortSignal.timeout(9000) });
+  if (!r.ok) throw new Error('deezer ' + r.status);
   const data = await r.json();
-  const items = (data.results || []).filter((x) => x.previewUrl);
-  if (!items.length) return null;
-  // выбираем самый «релевантный» — первый с превью
-  const t = items[0];
+  const item = (data.data || []).find((x) => x.preview);
+  if (!item) return null;
   return {
-    title: (t.trackName || query).slice(0, 80),
-    artist: (t.artistName || '').slice(0, 80),
-    url: t.previewUrl,
-    cover: (t.artworkUrl100 || '').replace('100x100', '300x300'),
-    album: t.collectionName || ''
+    title: (item.title || query).slice(0, 80),
+    artist: (item.artist && item.artist.name ? item.artist.name : '').slice(0, 80),
+    url: item.preview,
+    cover: (item.album && item.album.cover_xl) || (item.album && item.album.cover_big) || '',
+    album: (item.album && item.album.title) || '',
+    source: 'Deezer'
   };
+}
+
+// --- iTunes (запасной источник, без ключей) ---
+async function searchItunes(query) {
+  const r = await fetch('https://itunes.apple.com/search?media=music&entity=song&limit=8&term=' + encodeURIComponent(query), { signal: AbortSignal.timeout(9000) });
+  if (!r.ok) throw new Error('itunes ' + r.status);
+  const data = await r.json();
+  const item = (data.results || []).find((x) => x.previewUrl);
+  if (!item) return null;
+  return {
+    title: (item.trackName || query).slice(0, 80),
+    artist: (item.artistName || '').slice(0, 80),
+    url: item.previewUrl,
+    cover: (item.artworkUrl100 || '').replace('100x100', '300x300'),
+    album: item.collectionName || '',
+    source: 'iTunes'
+  };
+}
+
+// --- Spotify (опционально: включается, если заданы SPOTIFY_ID и SPOTIFY_SECRET) ---
+let spotifyToken = null, spotifyTokenExp = 0;
+async function getSpotifyToken() {
+  const id = process.env.SPOTIFY_ID || (secret && secret.spotifyId);
+  const sec = process.env.SPOTIFY_SECRET || (secret && secret.spotifySecret);
+  if (!id || !sec) return null;
+  if (spotifyToken && Date.now() < spotifyTokenExp) return spotifyToken;
+  const r = await fetch('https://accounts.spotify.com/api/token', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/x-www-form-urlencoded', Authorization: 'Basic ' + Buffer.from(id + ':' + sec).toString('base64') },
+    body: 'grant_type=client_credentials',
+    signal: AbortSignal.timeout(9000)
+  });
+  if (!r.ok) return null;
+  const d = await r.json();
+  spotifyToken = d.access_token;
+  spotifyTokenExp = Date.now() + (d.expires_in - 60) * 1000;
+  return spotifyToken;
+}
+
+async function searchSpotify(query) {
+  const token = await getSpotifyToken();
+  if (!token) return null;
+  const r = await fetch('https://api.spotify.com/v1/search?type=track&limit=8&q=' + encodeURIComponent(query), {
+    headers: { Authorization: 'Bearer ' + token }, signal: AbortSignal.timeout(9000)
+  });
+  if (!r.ok) return null;
+  const data = await r.json();
+  const item = (data.tracks && data.tracks.items || []).find((x) => x.preview_url);
+  if (!item) return null;
+  return {
+    title: (item.name || query).slice(0, 80),
+    artist: (item.artists || []).map((a) => a.name).join(', ').slice(0, 80),
+    url: item.preview_url,
+    cover: (item.album && item.album.images && item.album.images[0] && item.album.images[0].url) || '',
+    album: (item.album && item.album.name) || '',
+    source: 'Spotify'
+  };
+}
+
+// Ищем трек по всем источникам: Spotify (если настроен) → Deezer → iTunes
+async function searchTrack(query) {
+  const chain = [searchSpotify, searchDeezer, searchItunes];
+  for (const fn of chain) {
+    try {
+      const t = await fn(query);
+      if (t) return t;
+    } catch (e) { /* пробуем следующий источник */ }
+  }
+  return null;
 }
 
 async function assistAddTrack(text) {
@@ -656,15 +729,15 @@ async function assistAddTrack(text) {
     return '⚠ Не получилось поискать трек — попробуй ещё раз чуть позже.';
   }
   if (!t) {
-    return `Не нашёл трек «${query}» 🤔 Попробуй написать название точнее — исполнителя и песню.`;
+    return `Не нашёл трек «${query}» 🤔 Попробуй написать точнее — исполнителя и песню.`;
   }
   const ts = Date.now();
   const info = db.prepare('INSERT INTO tracks (title, artist, url, cover, sort, ts) VALUES (?,?,?,?,?,?)')
     .run(t.title, t.artist, t.url, t.cover, 0, ts);
-  notifyTelegram(`🎵 Never Assist добавил трек: «${t.title}» — ${t.artist}`);
+  notifyTelegram(`🎵 Never Assist добавил трек: «${t.title}» — ${t.artist} (${t.source})`);
   return {
-    answer: `🎵 Добавил в плейлист: «${t.title}» — ${t.artist}\nЭто превью трека, послушать можно на странице NeverMusic: /music`,
-    track: { id: info.lastInsertRowid, title: t.title, artist: t.artist, url: t.url, cover: t.cover },
+    answer: `🎵 Добавил в плейлист: «${t.title}» — ${t.artist}${t.album ? '\n💿 ' + t.album : ''}\nЭто превью трека, послушать можно на странице NeverMusic: /music`,
+    track: { id: info.lastInsertRowid, title: t.title, artist: t.artist, url: t.url, cover: t.cover, source: t.source },
     added: true
   };
 }
