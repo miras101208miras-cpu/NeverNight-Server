@@ -67,6 +67,39 @@
 
     audio { display: none; }
 
+    /* Добавление трека */
+    .add-box { margin-top: 14px; }
+    .add-toggle {
+      width: 100%; padding: 13px; border-radius: 12px; cursor: pointer;
+      background: var(--item-bg); border: 1px dashed rgba(0,240,255,0.4); color: var(--cyan);
+      font-family: 'JetBrains Mono', monospace; font-size: 0.82rem; transition: all 0.25s;
+    }
+    .add-toggle:hover { background: rgba(0,240,255,0.07); border-style: solid; }
+    .add-form {
+      display: flex; flex-direction: column; gap: 10px; margin-top: 10px; padding: 16px;
+      background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+      backdrop-filter: blur(16px); animation: fadeUp 0.3s ease both;
+    }
+    @keyframes fadeUp { from { opacity: 0; transform: translateY(-6px); } to { opacity: 1; transform: none; } }
+    .add-row { display: flex; gap: 10px; flex-wrap: wrap; }
+    .add-form input {
+      flex: 1; min-width: 130px; padding: 11px 14px; border-radius: 10px;
+      background: var(--input-bg); border: 1px solid var(--border); color: var(--text);
+      font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; outline: none;
+    }
+    .add-form input:focus { border-color: rgba(0,240,255,0.5); }
+    .add-actions { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; }
+    .add-save {
+      padding: 11px 22px; border: none; border-radius: 10px; cursor: pointer;
+      background: linear-gradient(135deg, var(--cyan), var(--purple)); color: #04060a;
+      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.85rem; transition: transform 0.2s;
+    }
+    .add-save:hover { transform: translateY(-2px); }
+    .add-save:disabled { opacity: 0.5; cursor: default; transform: none; }
+    .add-msg { font-family: 'JetBrains Mono', monospace; font-size: 0.74rem; }
+    .add-msg.ok { color: #10b981; }
+    .add-msg.err { color: #ef4444; }
+
     @media (max-width: 720px) {
       .player-layout { grid-template-columns: 1fr; }
       .now { padding: 18px; }
@@ -117,6 +150,22 @@
         <div class="section-title" style="margin-top:0">🎧 Плейлист <span id="plCount" style="color:var(--muted);font-size:0.9rem;font-weight:600"></span></div>
         <div class="panel" style="padding:14px">
           <div class="pl" id="pl"><div class="empty">Загрузка...</div></div>
+        </div>
+
+        <div class="add-box">
+          <button class="add-toggle" id="addToggle">＋ Добавить свой трек</button>
+          <form class="add-form" id="addForm" hidden>
+            <div class="add-row">
+              <input id="fTitle" placeholder="Название трека *" required maxlength="80">
+              <input id="fArtist" placeholder="Исполнитель" maxlength="80">
+            </div>
+            <input id="fUrl" placeholder="Ссылка на MP3 (https://… или /music/файл.mp3) *" required maxlength="400">
+            <input id="fCover" placeholder="Обложка — ссылка на картинку (необязательно)" maxlength="400">
+            <div class="add-actions">
+              <button type="submit" class="add-save" id="addSave">Добавить в плейлист</button>
+              <span class="add-msg" id="addMsg"></span>
+            </div>
+          </form>
         </div>
       </div>
     </div>
@@ -274,6 +323,44 @@
     requestAnimationFrame(vizLoop);
   }
   requestAnimationFrame(vizLoop);
+
+  // ---------- Добавление своего трека ----------
+  $('addToggle').onclick = () => {
+    const f = $('addForm');
+    f.hidden = !f.hidden;
+    if (!f.hidden) $('fTitle').focus();
+  };
+
+  $('addForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const msg = $('addMsg');
+    const body = {
+      title: $('fTitle').value.trim(),
+      artist: $('fArtist').value.trim(),
+      url: $('fUrl').value.trim(),
+      cover: $('fCover').value.trim()
+    };
+    if (!body.title || !body.url) { msg.className = 'add-msg err'; msg.textContent = 'Заполни название и ссылку'; return; }
+    $('addSave').disabled = true;
+    msg.className = 'add-msg'; msg.textContent = 'Добавляем…';
+    try {
+      const r = await fetch('/api/music/tracks', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body)
+      });
+      const d = await r.json();
+      if (!r.ok) throw new Error(d.error || 'Ошибка сервера');
+      // добавили — обновляем список и сразу открываем новый трек
+      tracks = await (await fetch('/api/music/tracks')).json();
+      $('addForm').reset();
+      msg.className = 'add-msg ok'; msg.textContent = '✓ Трек добавлен!';
+      const newIdx = tracks.findIndex((t) => t.id === d.id);
+      if (newIdx >= 0) playAt(newIdx); else render();
+      setTimeout(() => { $('addForm').hidden = true; msg.textContent = ''; }, 1600);
+    } catch (err) {
+      msg.className = 'add-msg err'; msg.textContent = '⚠ ' + err.message;
+    }
+    $('addSave').disabled = false;
+  });
 
   // ---------- Загрузка плейлиста ----------
   (async function init() {

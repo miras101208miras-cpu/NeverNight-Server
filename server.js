@@ -549,7 +549,7 @@ const AI_KB = [
   },
   {
     keys: ['музык', 'music', 'плеер', 'трек', 'песн'],
-    a: '🎵 NeverMusic — музыкальный плеер экосистемы: общий плейлист, воспроизведение прямо на сайте. Открыть: /music'
+    a: '🎵 NeverMusic — музыкальный плеер экосистемы: общий плейлист, воспроизведение прямо на сайте. Можно добавить свой трек — просто укажи название и ссылку на MP3. Открыть: /music'
   },
   {
     keys: ['статист', 'аналитик', 'stats', 'посещен'],
@@ -627,17 +627,47 @@ app.get('/api/music/tracks', (_req, res) => {
   const rows = db.prepare('SELECT id, title, artist, url, cover, sort, ts FROM tracks ORDER BY sort DESC, id ASC').all();
   res.json(rows);
 });
-app.post('/api/admin/music', requireAdmin, (req, res) => {
-  const title = clean(req.body.title, 80);
-  const artist = clean(req.body.artist, 80);
-  const url = clean(req.body.url, 400);
-  const cover = clean(req.body.cover, 400);
-  const sort = Number(req.body.sort) || 0;
-  if (!title || !url) return res.status(400).json({ error: 'Нужны название и ссылка на трек.' });
-  if (!/^https?:\/\//i.test(url) && !/^\//.test(url)) return res.status(400).json({ error: 'Ссылка должна начинаться с http(s):// или /' });
+
+// Публичное добавление трека (свой плейлист — можно добавлять самому).
+// Доступно всем, но с защитой от спама: лимит добавлений с одного IP.
+const musicAddLog = new Map(); // ip -> массив timestamp
+
+function validateTrack(body) {
+  const title = clean(body.title, 80);
+  const artist = clean(body.artist, 80);
+  const url = clean(body.url, 400);
+  const cover = clean(body.cover, 400);
+  const sort = Number(body.sort) || 0;
+  if (!title || !url) return { error: 'Нужны название и ссылка на трек.' };
+  if (!/^https?:\/\//i.test(url) && !/^\//.test(url)) return { error: 'Ссылка должна начинаться с http(s):// или /' };
+  return { title, artist, url, cover, sort };
+}
+
+app.post('/api/music/tracks', (req, res) => {
+  const ip = req.ip || 'unknown';
+  const now = Date.now();
+  const hist = (musicAddLog.get(ip) || []).filter((t) => now - t < 60 * 60 * 1000); // за час
+  if (hist.length >= 15) {
+    return res.status(429).json({ error: 'Слишком много добавлений. Попробуй позже.' });
+  }
+  const v = validateTrack(req.body);
+  if (v.error) return res.status(400).json({ error: v.error });
+  const ts = Date.now();
   const info = db.prepare('INSERT INTO tracks (title, artist, url, cover, sort, ts) VALUES (?,?,?,?,?,?)')
-    .run(title, artist, url, cover, sort, Date.now());
-  res.json({ id: info.lastInsertRowid, title, artist, url, cover, sort, ts: Date.now() });
+    .run(v.title, v.artist, v.url, v.cover, v.sort, ts);
+  hist.push(now);
+  musicAddLog.set(ip, hist);
+  // уведомим владельца в Telegram
+  notifyTelegram(`🎵 Новый трек в NeverMusic: «${v.title}»${v.artist ? ' — ' + v.artist : ''}`);
+  res.json({ id: info.lastInsertRowid, title: v.title, artist: v.artist, url: v.url, cover: v.cover, sort: v.sort, ts });
+});
+
+app.post('/api/admin/music', requireAdmin, (req, res) => {
+  const v = validateTrack(req.body);
+  if (v.error) return res.status(400).json({ error: v.error });
+  const info = db.prepare('INSERT INTO tracks (title, artist, url, cover, sort, ts) VALUES (?,?,?,?,?,?)')
+    .run(v.title, v.artist, v.url, v.cover, v.sort, Date.now());
+  res.json({ id: info.lastInsertRowid, title: v.title, artist: v.artist, url: v.url, cover: v.cover, sort: v.sort, ts: Date.now() });
 });
 app.delete('/api/admin/music/:id', requireAdmin, (req, res) => {
   db.prepare('DELETE FROM tracks WHERE id = ?').run(Number(req.params.id));
