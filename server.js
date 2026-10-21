@@ -634,7 +634,7 @@ app.post('/api/admin/music', requireAdmin, (req, res) => {
   const cover = clean(req.body.cover, 400);
   const sort = Number(req.body.sort) || 0;
   if (!title || !url) return res.status(400).json({ error: 'Нужны название и ссылка на трек.' });
-  if (!/^https?:\/\//i.test(url)) return res.status(400).json({ error: 'Ссылка должна начинаться с http:// или https://' });
+  if (!/^https?:\/\//i.test(url) && !/^\//.test(url)) return res.status(400).json({ error: 'Ссылка должна начинаться с http(s):// или /' });
   const info = db.prepare('INSERT INTO tracks (title, artist, url, cover, sort, ts) VALUES (?,?,?,?,?,?)')
     .run(title, artist, url, cover, sort, Date.now());
   res.json({ id: info.lastInsertRowid, title, artist, url, cover, sort, ts: Date.now() });
@@ -697,11 +697,11 @@ if (db.prepare('SELECT COUNT(*) AS c FROM projects').get().c === 0) {
 // ---------- Стартовое наполнение плейлиста NeverMusic ----------
 if (db.prepare('SELECT COUNT(*) AS c FROM tracks').get().c === 0) {
   const seedTracks = [
-    ['Neon Drive', 'Lofi Beats', 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3?filename=lofi-study-112191.mp3', 'https://cdn.pixabay.com/photo/2019/04/10/11/56/audio-4114098_640.jpg', 5],
-    ['Cyber Pulse', 'Synthwave', 'https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0c6ff1bab.mp3?filename=synthwave-80s-110045.mp3', 'https://cdn.pixabay.com/photo/2019/03/17/20/44/equalizer-3908832_640.jpg', 4],
-    ['Deep Space', 'Ambient', 'https://cdn.pixabay.com/download/audio/2021/11/25/audio_00fa5593f3.mp3?filename=ambient-piano-amp-strings-10711.mp3', 'https://cdn.pixabay.com/photo/2016/11/29/05/45/astronomy-1867616_640.jpg', 3],
-    ['Morning Light', 'Chill', 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-chill-medium-version-159456.mp3', 'https://cdn.pixabay.com/photo/2016/03/09/09/22/workplace-1245776_640.jpg', 2],
-    ['Night Runner', 'Electro', 'https://cdn.pixabay.com/download/audio/2022/10/25/audio_946bc5d4e0.mp3?filename=electronic-future-beats-117997.mp3', 'https://cdn.pixabay.com/photo/2017/08/10/08/47/laptop-2620118_640.jpg', 1]
+    ['Neon Drive', 'Synthwave', '/music/track1.mp3', '', 5],
+    ['Cyber Pulse', 'Electro', '/music/track2.mp3', '', 4],
+    ['Deep Space', 'Ambient', '/music/track3.mp3', '', 3],
+    ['Morning Light', 'Chill', '/music/track4.mp3', '', 2],
+    ['Night Runner', 'Electronica', '/music/track5.mp3', '', 1]
   ];
   const insT = db.prepare('INSERT INTO tracks (title, artist, url, cover, sort, ts) VALUES (?,?,?,?,?,?)');
   const tt = Date.now();
