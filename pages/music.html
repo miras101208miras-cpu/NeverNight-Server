@@ -1,0 +1,290 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>NeverMusic — Музыкальный плеер EcosystemNever</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Montserrat:wght@600;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    .player-layout { display: grid; grid-template-columns: 290px 1fr; gap: 18px; }
+    .now {
+      background: var(--card); border: 1px solid var(--border); border-radius: 20px; padding: 22px;
+      backdrop-filter: blur(16px); box-shadow: 0 15px 40px rgba(0,0,0,0.5); text-align: center;
+      display: flex; flex-direction: column; gap: 16px;
+    }
+    .cover {
+      width: 100%; aspect-ratio: 1; border-radius: 16px; overflow: hidden; position: relative;
+      background: linear-gradient(135deg, rgba(0,240,255,0.15), rgba(168,85,247,0.15));
+      border: 1px solid var(--border); display: flex; align-items: center; justify-content: center; font-size: 3.4rem;
+    }
+    .cover img { width: 100%; height: 100%; object-fit: cover; }
+    .cover.playing { animation: pulseGlow 3s ease-in-out infinite; }
+    @keyframes pulseGlow { 0%,100% { box-shadow: 0 0 25px rgba(0,240,255,0.25); } 50% { box-shadow: 0 0 45px rgba(168,85,247,0.45); } }
+    .now-title { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.15rem; }
+    .now-artist { color: var(--muted); font-size: 0.82rem; font-family: 'JetBrains Mono', monospace; }
+
+    /* Визуализация */
+    #viz { width: 100%; height: 70px; display: block; border-radius: 10px; background: rgba(255,255,255,0.02); }
+
+    /* Прогресс */
+    .progress-wrap { display: flex; flex-direction: column; gap: 6px; }
+    .progress { width: 100%; height: 6px; border-radius: 4px; background: rgba(255,255,255,0.08); cursor: pointer; overflow: hidden; }
+    .progress-bar { height: 100%; width: 0%; border-radius: 4px; background: linear-gradient(90deg, var(--cyan), var(--purple)); transition: width 0.15s linear; }
+    .times { display: flex; justify-content: space-between; font-family: 'JetBrains Mono', monospace; font-size: 0.66rem; color: var(--muted); }
+
+    .controls { display: flex; align-items: center; justify-content: center; gap: 14px; }
+    .ctrl {
+      width: 44px; height: 44px; border-radius: 50%; cursor: pointer; border: 1px solid var(--border);
+      background: var(--item-bg); color: var(--text); font-size: 1.1rem; display: flex; align-items: center; justify-content: center;
+      transition: all 0.25s;
+    }
+    .ctrl:hover { border-color: rgba(0,240,255,0.5); transform: scale(1.08); }
+    .ctrl.play { width: 58px; height: 58px; font-size: 1.4rem; background: linear-gradient(135deg, var(--cyan), var(--purple)); color: #04060a; border: none; box-shadow: 0 0 25px rgba(0,240,255,0.45); }
+
+    /* Плейлист */
+    .pl { display: flex; flex-direction: column; gap: 8px; max-height: 480px; overflow-y: auto; }
+    .trk {
+      display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-radius: 12px; cursor: pointer;
+      background: var(--item-bg); border: 1px solid var(--border); transition: all 0.25s;
+    }
+    .trk:hover { border-color: rgba(0,240,255,0.4); transform: translateX(3px); }
+    .trk.active { border-color: rgba(0,240,255,0.6); background: rgba(0,240,255,0.06); box-shadow: 0 0 18px rgba(0,240,255,0.18); }
+    .trk-num { font-family: 'JetBrains Mono', monospace; font-size: 0.7rem; color: var(--dim); width: 20px; text-align: center; flex-shrink: 0; }
+    .trk.active .trk-num { color: var(--cyan); }
+    .trk-cover { width: 38px; height: 38px; border-radius: 8px; overflow: hidden; flex-shrink: 0; background: rgba(255,255,255,0.05); display: flex; align-items: center; justify-content: center; font-size: 1rem; }
+    .trk-cover img { width: 100%; height: 100%; object-fit: cover; }
+    .trk-info { flex: 1; min-width: 0; }
+    .trk-title { font-weight: 700; font-size: 0.88rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+    .trk-artist { font-family: 'JetBrains Mono', monospace; font-size: 0.66rem; color: var(--muted); }
+    .trk-eq { display: none; gap: 2px; align-items: flex-end; height: 16px; }
+    .trk.active .trk-eq { display: flex; }
+    .trk-eq span { width: 3px; background: var(--cyan); border-radius: 2px; animation: eq 0.8s ease-in-out infinite; }
+    .trk-eq span:nth-child(2) { animation-delay: 0.15s; }
+    .trk-eq span:nth-child(3) { animation-delay: 0.3s; }
+    @keyframes eq { 0%,100% { height: 4px; } 50% { height: 16px; } }
+
+    audio { display: none; }
+
+    @media (max-width: 720px) {
+      .player-layout { grid-template-columns: 1fr; }
+      .now { padding: 18px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="glow"></div>
+  <div class="topbar">
+    <a href="/" class="brand"><div class="brand-logo">🎵</div><div class="brand-title">Never<span>Music</span></div></a>
+    <div class="nav-links">
+      <a href="/projects" class="back-btn">🗂 ПРОЕКТЫ</a>
+      <a href="/" class="back-btn">← НА ХАБ</a>
+    </div>
+  </div>
+
+  <div class="wrap">
+    <div>
+      <div class="tag">// Музыка экосистемы</div>
+      <h1>Never<span>Music</span></h1>
+      <p class="sub">Общий плейлист экосистемы: включи трек — и слушай прямо на сайте, с визуализацией и живым эквалайзером.</p>
+    </div>
+
+    <div class="player-layout">
+      <div class="now">
+        <div class="cover" id="cover">🎵</div>
+        <div>
+          <div class="now-title" id="nowTitle">Выбери трек</div>
+          <div class="now-artist" id="nowArtist">—</div>
+        </div>
+        <canvas id="viz"></canvas>
+        <div class="progress-wrap">
+          <div class="progress" id="progress"><div class="progress-bar" id="progressBar"></div></div>
+          <div class="times"><span id="curTime">0:00</span><span id="durTime">0:00</span></div>
+        </div>
+        <div class="controls">
+          <button class="ctrl" id="prevBtn" title="Назад">⏮</button>
+          <button class="ctrl play" id="playBtn" title="Играть">▶</button>
+          <button class="ctrl" id="nextBtn" title="Дальше">⏭</button>
+        </div>
+        <div class="controls" style="gap:10px">
+          <button class="ctrl" id="volBtn" title="Звук" style="width:38px;height:38px;font-size:0.95rem">🔊</button>
+          <input type="range" id="volume" min="0" max="100" value="80" style="flex:1;accent-color:#00f0ff">
+        </div>
+      </div>
+
+      <div>
+        <div class="section-title" style="margin-top:0">🎧 Плейлист <span id="plCount" style="color:var(--muted);font-size:0.9rem;font-weight:600"></span></div>
+        <div class="panel" style="padding:14px">
+          <div class="pl" id="pl"><div class="empty">Загрузка...</div></div>
+        </div>
+      </div>
+    </div>
+
+    <div class="foot">NeverMusic · EcosystemNever</div>
+  </div>
+
+  <audio id="audio" preload="metadata"></audio>
+
+  <link rel="stylesheet" href="/style.css">
+  <script src="/app.js" defer></script>
+
+<script>
+(() => {
+  const audio = document.getElementById('audio');
+  const $ = (id) => document.getElementById(id);
+  let tracks = [], idx = -1;
+
+  const fmt = (s) => {
+    if (!isFinite(s)) return '0:00';
+    const m = Math.floor(s / 60), sec = Math.floor(s % 60);
+    return m + ':' + String(sec).padStart(2, '0');
+  };
+  const esc = (s) => String(s).replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  function render() {
+    const pl = $('pl');
+    $('plCount').textContent = tracks.length ? '(' + tracks.length + ')' : '';
+    if (!tracks.length) { pl.innerHTML = '<div class="empty">Плейлист пуст</div>'; return; }
+    pl.innerHTML = '';
+    tracks.forEach((t, i) => {
+      const d = document.createElement('div');
+      d.className = 'trk' + (i === idx ? ' active' : '');
+      d.innerHTML =
+        '<div class="trk-cover">' + (t.cover ? '<img src="' + esc(t.cover) + '" alt="" loading="lazy">' : '🎵') + '</div>' +
+        '<div class="trk-info"><div class="trk-title">' + esc(t.title) + '</div><div class="trk-artist">' + esc(t.artist || 'Неизвестен') + '</div></div>' +
+        '<div class="trk-eq"><span></span><span></span><span></span></div>';
+      d.onclick = () => playAt(i);
+      pl.appendChild(d);
+    });
+  }
+
+  function load(i) {
+    const t = tracks[i];
+    if (!t) return;
+    idx = i;
+    audio.src = t.url;
+    $('nowTitle').textContent = t.title;
+    $('nowArtist').textContent = t.artist || 'Неизвестен';
+    const cov = $('cover');
+    cov.innerHTML = t.cover ? '<img src="' + esc(t.cover) + '" alt="">' : '🎵';
+    render();
+  }
+
+  function playAt(i) {
+    load(i);
+    audio.play().catch(() => {});
+  }
+
+  function toggle() {
+    if (idx === -1 && tracks.length) { playAt(0); return; }
+    if (audio.paused) audio.play().catch(() => {}); else audio.pause();
+  }
+
+  function next() { if (tracks.length) playAt((idx + 1) % tracks.length); }
+  function prev() { if (tracks.length) playAt((idx - 1 + tracks.length) % tracks.length); }
+
+  // ---------- Управление ----------
+  $('playBtn').onclick = toggle;
+  $('nextBtn').onclick = next;
+  $('prevBtn').onclick = prev;
+
+  $('progress').onclick = (e) => {
+    if (!audio.duration) return;
+    const r = e.currentTarget.getBoundingClientRect();
+    audio.currentTime = ((e.clientX - r.left) / r.width) * audio.duration;
+  };
+
+  $('volume').oninput = (e) => {
+    audio.volume = e.target.value / 100;
+    $('volBtn').textContent = audio.volume === 0 ? '🔇' : (audio.volume < 0.5 ? '🔉' : '🔊');
+  };
+  $('volBtn').onclick = () => {
+    const cur = audio.volume;
+    audio.volume = cur > 0 ? 0 : 0.8;
+    $('volume').value = audio.volume * 100;
+    $('volBtn').textContent = audio.volume === 0 ? '🔇' : '🔊';
+  };
+
+  audio.addEventListener('play', () => {
+    $('playBtn').textContent = '⏸';
+    $('cover').classList.add('playing');
+    render();
+  });
+  audio.addEventListener('pause', () => {
+    $('playBtn').textContent = '▶';
+    $('cover').classList.remove('playing');
+    render();
+  });
+  audio.addEventListener('ended', next);
+  audio.addEventListener('timeupdate', () => {
+    if (audio.duration) $('progressBar').style.width = (audio.currentTime / audio.duration * 100) + '%';
+    $('curTime').textContent = fmt(audio.currentTime);
+  });
+  audio.addEventListener('loadedmetadata', () => { $('durTime').textContent = fmt(audio.duration); });
+  audio.volume = 0.8;
+
+  // ---------- Визуализация ----------
+  const viz = $('viz');
+  const vctx = viz.getContext('2d');
+  let analyser = null, srcNode = null, dataArr = null;
+  try {
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (AC) {
+      const actx = new AC();
+      srcNode = actx.createMediaElementSource(audio);
+      analyser = actx.createAnalyser();
+      analyser.fftSize = 128;
+      dataArr = new Uint8Array(analyser.frequencyBinCount);
+      srcNode.connect(analyser);
+      analyser.connect(actx.destination);
+      audio.addEventListener('play', () => { if (actx.state === 'suspended') actx.resume(); });
+    }
+  } catch (e) { analyser = null; }
+
+  function vizLoop() {
+    const dpr = window.devicePixelRatio || 1;
+    const w = viz.clientWidth, h = viz.clientHeight;
+    if (viz.width !== w * dpr || viz.height !== h * dpr) { viz.width = w * dpr; viz.height = h * dpr; vctx.setTransform(dpr, 0, 0, dpr, 0, 0); }
+    vctx.clearRect(0, 0, w, h);
+    const bars = 48, bw = w / bars - 2;
+    let vals = null;
+    let loud = 0;
+    if (analyser && !audio.paused) {
+      analyser.getByteFrequencyData(dataArr);
+      let sum = 0; for (let i = 0; i < dataArr.length; i++) sum += dataArr[i];
+      loud = sum / dataArr.length;
+      if (loud > 1) vals = dataArr;
+    }
+    for (let i = 0; i < bars; i++) {
+      let v;
+      if (vals) {
+        v = Math.max(3, (vals[Math.floor(i * vals.length / bars)] / 255) * h);
+      } else {
+        // тишина/пауза либо нет анализатора — декоративная волна
+        const ph = Date.now() / 420;
+        v = 6 + (Math.sin(ph + i * 0.35) * 0.5 + 0.5) * (h * 0.35) + (Math.sin(ph * 1.7 + i * 0.7) * 0.5 + 0.5) * (h * 0.2);
+      }
+      const grad = vctx.createLinearGradient(0, h, 0, h - v);
+      grad.addColorStop(0, '#00f0ff');
+      grad.addColorStop(1, '#a855f7');
+      vctx.fillStyle = grad;
+      vctx.fillRect(i * (bw + 2), h - v, bw, v);
+    }
+    requestAnimationFrame(vizLoop);
+  }
+  requestAnimationFrame(vizLoop);
+
+  // ---------- Загрузка плейлиста ----------
+  (async function init() {
+    try {
+      tracks = await (await fetch('/api/music/tracks')).json();
+      render();
+    } catch (e) {
+      $('pl').innerHTML = '<div class="empty">⚠ Сервер офлайн</div>';
+    }
+  })();
+})();
+</script>
+</body>
+</html>

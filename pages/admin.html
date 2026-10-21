@@ -163,6 +163,7 @@
       <a href="/guestbook" target="_blank" class="back-btn">📖 ГОСТЕВАЯ</a>
       <a href="/chat" target="_blank" class="back-btn">💬 ЧАТ</a>
       <a href="/stats" target="_blank" class="back-btn">📈 АНАЛИТИКА</a>
+      <a href="/music" target="_blank" class="back-btn">🎵 МУЗЫКА</a>
       <a href="/" class="back-btn">← НА ХАБ</a>
     </div>
   </div>
@@ -217,6 +218,18 @@
     <div class="section-title">🎮 Рекорды NeverGame</div>
     <div class="panel">
       <div class="items" id="gameList"><div class="empty">Загрузка...</div></div>
+    </div>
+
+    <div class="section-title">🎵 Плейлист NeverMusic</div>
+    <div class="panel">
+      <form id="trackForm" style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px">
+        <input id="tTitle" placeholder="Название" required style="flex:1;min-width:130px;padding:10px 13px;border-radius:10px;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:#f8fafc;font-family:'JetBrains Mono',monospace;font-size:0.8rem;outline:none">
+        <input id="tArtist" placeholder="Исполнитель" style="flex:1;min-width:110px;padding:10px 13px;border-radius:10px;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:#f8fafc;font-family:'JetBrains Mono',monospace;font-size:0.8rem;outline:none">
+        <input id="tUrl" placeholder="Ссылка на MP3 (https://...)" required style="flex:2;min-width:180px;padding:10px 13px;border-radius:10px;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:#f8fafc;font-family:'JetBrains Mono',monospace;font-size:0.8rem;outline:none">
+        <input id="tCover" placeholder="Обложка (ссылка, необязательно)" style="flex:2;min-width:160px;padding:10px 13px;border-radius:10px;background:rgba(255,255,255,0.05);border:1px solid var(--border);color:#f8fafc;font-family:'JetBrains Mono',monospace;font-size:0.8rem;outline:none">
+        <button type="submit" class="lock-btn" style="width:auto;padding:10px 20px;font-size:0.85rem">+ Добавить трек</button>
+      </form>
+      <div class="items" id="musicList"><div class="empty">Загрузка...</div></div>
     </div>
 
     <div class="section-title">💡 Идеи <span class="count-badge" id="ideasBadge">0</span></div>
@@ -467,7 +480,40 @@
     rows.forEach((r, i) => $('gameList').appendChild(gameNode(r, i + 1)));
   }
 
-  async function loadAll() { try { await Promise.all([loadMain(), loadActivity(), loadChat(), loadProjects(), loadGame()]); } catch (e) { if (e.message !== '401') console.error(e); } }
+  // ---------- Плейлист NeverMusic ----------
+  function trackNode(t) {
+    const div = document.createElement('div'); div.className = 'item';
+    const body = document.createElement('div'); body.className = 'item-body';
+    const text = document.createElement('div'); text.className = 'item-text';
+    text.textContent = t.title + (t.artist ? ' — ' + t.artist : '');
+    const meta = document.createElement('div'); meta.className = 'item-meta';
+    meta.textContent = '#' + t.id + ' · ' + t.url;
+    body.append(text, meta);
+    const del = document.createElement('button'); del.className = 'del-btn'; del.textContent = '✕ Удалить';
+    del.onclick = async () => {
+      if (!confirm('Удалить трек «' + t.title + '»?')) return;
+      await api('/api/admin/music/' + t.id, { method: 'DELETE' });
+      div.remove();
+    };
+    div.append(body, del); return div;
+  }
+  async function loadMusic() {
+    const rows = await (await fetch('/api/music/tracks')).json();
+    $('musicList').innerHTML = rows.length ? '' : '<div class="empty">Плейлист пуст</div>';
+    rows.forEach((t) => $('musicList').appendChild(trackNode(t)));
+  }
+  $('trackForm').addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const body = { title: $('tTitle').value, artist: $('tArtist').value, url: $('tUrl').value, cover: $('tCover').value };
+    if (!body.title.trim() || !body.url.trim()) return;
+    try {
+      await api('/api/admin/music', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+      $('trackForm').reset();
+      loadMusic();
+    } catch (err) { alert('Ошибка: ' + err.message); }
+  });
+
+  async function loadAll() { try { await Promise.all([loadMain(), loadActivity(), loadChat(), loadProjects(), loadGame(), loadMusic()]); } catch (e) { if (e.message !== '401') console.error(e); } }
 
   (async function init() {
     if (PASS && await tryAuth(PASS)) { hideLock(); loadAll(); }

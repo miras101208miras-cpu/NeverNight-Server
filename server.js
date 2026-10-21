@@ -80,6 +80,24 @@ db.exec(`
     level INTEGER NOT NULL DEFAULT 1,
     ts INTEGER NOT NULL
   );
+  -- История диалогов с ассистентом (NeverAI)
+  CREATE TABLE IF NOT EXISTS ai_messages (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    session TEXT NOT NULL DEFAULT '',
+    role TEXT NOT NULL DEFAULT 'user',
+    text TEXT NOT NULL DEFAULT '',
+    ts INTEGER NOT NULL
+  );
+  -- Треки плейлиста (NeverMusic)
+  CREATE TABLE IF NOT EXISTS tracks (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    artist TEXT NOT NULL DEFAULT '',
+    url TEXT NOT NULL DEFAULT '',
+    cover TEXT NOT NULL DEFAULT '',
+    sort INTEGER NOT NULL DEFAULT 0,
+    ts INTEGER NOT NULL
+  );
 `);
 
 // ---------- Веб-сервер ----------
@@ -290,6 +308,10 @@ app.get('/about', (_req, res) =>
   res.sendFile(path.join(__dirname, 'pages', 'about.html')));
 app.get('/game', (_req, res) =>
   res.sendFile(path.join(__dirname, 'pages', 'game.html')));
+app.get('/ai', (_req, res) =>
+  res.sendFile(path.join(__dirname, 'pages', 'ai.html')));
+app.get('/music', (_req, res) =>
+  res.sendFile(path.join(__dirname, 'pages', 'music.html')));
 
 // ============================================================
 //  NeverPing — мониторинг сервисов экосистемы
@@ -306,6 +328,8 @@ const TARGETS = [
   { name: 'NeverProjects',    url: `${SELF_URL}/projects` },
   { name: 'NeverStats',       url: `${SELF_URL}/stats` },
   { name: 'NeverGame',        url: `${SELF_URL}/game` },
+  { name: 'NeverAI',          url: `${SELF_URL}/ai` },
+  { name: 'NeverMusic',       url: `${SELF_URL}/music` },
   { name: 'Telegram-бот',     url: 'https://t.me/ecosystem_never_bot' },
   { name: 'GitHub',           url: 'https://github.com/miras101208miras-cpu' }
 ];
@@ -480,6 +504,147 @@ app.delete('/api/admin/game/:id', requireAdmin, (req, res) => {
 });
 
 // ============================================================
+//  NeverAI — чат-ассистент экосистемы (на правилах, без внешних API)
+// ============================================================
+const AI_KB = [
+  {
+    keys: ['привет', 'здравств', 'хай', 'hello', 'hi', 'ку'],
+    a: 'Привет! 👋 Я NeverAI — ассистент экосистемы EcosystemNever. Спроси меня о проектах, хостинге, коде или о NeverNight.'
+  },
+  {
+    keys: ['кто ты', 'что ты', 'тебя зовут', 'твое имя', 'твоё имя'],
+    a: 'Я NeverAI — демо-ассистент экосистемы. Работаю на правилах прямо на сервере: без внешних API и ключей. Могу рассказать про проекты, технологии и подсказать команды.'
+  },
+  {
+    keys: ['nevernight', 'никого', 'автор', 'владел', 'создател', 'кто сделал'],
+    a: 'NeverNight — разработчик экосистемы EcosystemNever. Учится программировать, делает сайты, чаты, ботов и веб-сервисы на Node.js. Открыт к стажировкам и первым заказам. Telegram: @light18101'
+  },
+  {
+    keys: ['контакт', 'связ', 'телеграм', 'telegram', 'написать', 'почт', 'email'],
+    a: '📬 Связаться с NeverNight:\n• Telegram — @light18101\n• GitHub — github.com/miras101208miras-cpu\n• Телефон — +7 775 087 60 34'
+  },
+  {
+    keys: ['проект', 'что есть', 'сервис', 'портфолио', 'список'],
+    a: 'В экосистеме уже больше 20 проектов: портал EcosystemNever, фан-сайт Demon Slayer, NeverParty, NeverChat, NeverWall, NeverGuestbook, NeverPing, NeverProjects, NeverStats, NeverProfile, NeverAbout, NeverGame и Telegram-бот. Полный список — на странице /projects 🗂'
+  },
+  {
+    keys: ['чат', 'neverchat', 'общени', 'комнат'],
+    a: '💬 NeverChat — анонимный чат в реальном времени (Socket.IO): комнаты по ссылке, цветные ники, индикатор «печатает...», история в базе. Открыть: /chat'
+  },
+  {
+    keys: ['гостев', 'guestbook', 'записи'],
+    a: '📖 NeverGuestbook — гостевая книга экосистемы. Любой может оставить запись, её видят все. Открыть: /guestbook'
+  },
+  {
+    keys: ['стена', 'иде', 'wall', 'голосован'],
+    a: '📝 NeverWall — стена идей: предлагаешь фичу, другие голосуют. Лучшие идеи видно сверху. Открыть: /wall'
+  },
+  {
+    keys: ['статус', 'ping', 'мониторинг', 'онлайн сервис'],
+    a: '📡 NeverPing — статус-страница: сервер проверяет все сервисы и показывает онлайн/оффлайн, код ответа и время отклика. Открыть: /status'
+  },
+  {
+    keys: ['игр', 'game', 'рекорд', 'аркад'],
+    a: '🎮 NeverGame — неоновая аркада на Canvas: лови сферы, собирай комбо, бей рекорды. Открыть: /game'
+  },
+  {
+    keys: ['музык', 'music', 'плеер', 'трек', 'песн'],
+    a: '🎵 NeverMusic — музыкальный плеер экосистемы: общий плейлист, воспроизведение прямо на сайте. Открыть: /music'
+  },
+  {
+    keys: ['статист', 'аналитик', 'stats', 'посещен'],
+    a: '📈 NeverStats — своя аналитика посещений: просмотры по дням, источники переходов, популярные страницы. Доступ закрыт паролем. Открыть: /stats'
+  },
+  {
+    keys: ['бот', 'telegram', 'телеграм'],
+    a: '🤖 @ecosystem_never_bot — бот экосистемы: присылает уведомления о новых записях, идеях и сообщениях в мой Telegram.'
+  },
+  {
+    keys: ['домен', 'адрес', 'ссылка на сайт', 'сайт'],
+    a: '🌐 Экосистема живёт на nevernight-server.onrender.com, портфолио — на GitHub Pages. Скоро будет красивый адрес nevernight.is-a.dev (заявка уже подана).'
+  },
+  {
+    keys: ['технолог', 'стек', 'на чем', 'на чём', 'написан'],
+    a: '⚙️ Стек: Node.js + Express, Socket.IO (реалтайм), SQLite (better-sqlite3), чистый HTML/CSS/JavaScript, Canvas API, Telegram Bot API. Хостинг — Render, статика — GitHub Pages.'
+  },
+  {
+    keys: ['хостинг', 'хост', 'render', 'деплой', 'разверн'],
+    a: '🚀 Хостинг: сервер — Render (Node 20, автодеплой из GitHub), сайты — GitHub Pages. Сервер сам собирается и перезапускается при каждом пуше в main.'
+  },
+  {
+    keys: ['база', 'sqlite', 'данн', 'бд'],
+    a: '🗄 Данные хранятся в SQLite (better-sqlite3): чат, гостевая, идеи, каталог проектов, аналитика, рекорды игры. На бесплатном Render база сбрасывается при деплое — поэтому есть стартовое наполнение каталога.'
+  },
+  {
+    keys: ['админ', 'пароль', 'admin', 'вход'],
+    a: '🛡 NeverAdmin — панель управления: идеи, гостевая, чат и график активности, управление каталогом и рекордами. Вход по паролю. Открыть: /admin'
+  },
+  {
+    keys: ['спасибо', 'благодар', 'thanks'],
+    a: 'Пожалуйста! 😊 Если что-то нужно — спрашивай. Ещё могу подсказать по проектам, стеку или контактам.'
+  },
+  {
+    keys: ['помощь', 'help', 'что умеешь', 'команд'],
+    a: 'Я умею рассказывать про:\n• проекты — «какие есть проекты»\n• сервисы — чат, гостевая, стена, статус\n• технологии и хостинг\n• контакты NeverNight\n• админку и пароль\nСпрашивай своими словами!'
+  }
+];
+
+function aiReply(text) {
+  const q = String(text || '').toLowerCase().trim();
+  if (!q) return 'Напиши вопрос — и я отвечу 🙂';
+  if (q.length > 500) return 'Слишком длинный вопрос — попробуй короче.';
+  for (const item of AI_KB) {
+    for (const k of item.keys) {
+      if (q.includes(k)) return item.a;
+    }
+  }
+  // если совсем ничего не подошло
+  if (q.includes('?') || q.includes('как') || q.includes('почему') || q.includes('что')) {
+    return 'Хм, не уверен, что понял 🤔 Попробуй спросить про: проекты, чат, музыку, статус, технологии, контакты или админку. Или напиши «помощь».';
+  }
+  return 'Не понял запрос 🤔 Напиши «помощь» — покажу, о чём можно спросить.';
+}
+
+app.post('/api/ai', (req, res) => {
+  const text = clean(req.body.text, 600);
+  const session = clean(req.body.session, 40) || 'anon';
+  const answer = aiReply(text);
+  const ts = Date.now();
+  const ins = db.prepare('INSERT INTO ai_messages (session, role, text, ts) VALUES (?,?,?,?)');
+  ins.run(session, 'user', text, ts);
+  ins.run(session, 'ai', answer, ts + 1);
+  res.json({ answer });
+});
+
+app.get('/api/ai/history', (req, res) => {
+  const session = clean(req.query.session, 40) || 'anon';
+  const rows = db.prepare('SELECT role, text, ts FROM ai_messages WHERE session = ? ORDER BY id DESC LIMIT 50').all(session);
+  res.json(rows.reverse());
+});
+
+// ---------- NeverMusic — плейлист ----------
+app.get('/api/music/tracks', (_req, res) => {
+  const rows = db.prepare('SELECT id, title, artist, url, cover, sort, ts FROM tracks ORDER BY sort DESC, id ASC').all();
+  res.json(rows);
+});
+app.post('/api/admin/music', requireAdmin, (req, res) => {
+  const title = clean(req.body.title, 80);
+  const artist = clean(req.body.artist, 80);
+  const url = clean(req.body.url, 400);
+  const cover = clean(req.body.cover, 400);
+  const sort = Number(req.body.sort) || 0;
+  if (!title || !url) return res.status(400).json({ error: 'Нужны название и ссылка на трек.' });
+  if (!/^https?:\/\//i.test(url)) return res.status(400).json({ error: 'Ссылка должна начинаться с http:// или https://' });
+  const info = db.prepare('INSERT INTO tracks (title, artist, url, cover, sort, ts) VALUES (?,?,?,?,?,?)')
+    .run(title, artist, url, cover, sort, Date.now());
+  res.json({ id: info.lastInsertRowid, title, artist, url, cover, sort, ts: Date.now() });
+});
+app.delete('/api/admin/music/:id', requireAdmin, (req, res) => {
+  db.prepare('DELETE FROM tracks WHERE id = ?').run(Number(req.params.id));
+  res.json({ ok: true });
+});
+
+// ============================================================
 //  Модерация чата в админке (комнаты, сообщения, кто онлайн)
 // ============================================================
 app.get('/api/admin/rooms', requireAdmin, (_req, res) => {
@@ -516,6 +681,8 @@ if (db.prepare('SELECT COUNT(*) AS c FROM projects').get().c === 0) {
     ['Demon Slayer', 'Фан-сайт по «Клинку, рассекающему демонов»', 'https://miras101208miras-cpu.github.io/NeverProduct-Demon-Slayer/', 'Онлайн', 8],
     ['NeverParty', 'Смотровая вечеринка — смотрите вместе', 'https://miras101208miras-cpu.github.io/EcosystemNever/party/index.html', 'Онлайн', 7],
     ['NeverGame', 'Неоновая мини-игра с таблицей рекордов', '/game', 'Онлайн', 7],
+    ['NeverAI', 'Чат-ассистент экосистемы на правилах', '/ai', 'Онлайн', 7],
+    ['NeverMusic', 'Музыкальный плеер с общим плейлистом', '/music', 'Онлайн', 7],
     ['NeverChat', 'Анонимный чат в реальном времени', '/chat', 'Бета', 6],
     ['NeverWall', 'Стена идей с голосованием', '/wall', 'Бета', 5],
     ['NeverGuestbook', 'Гостевая книга экосистемы', '/guestbook', 'Бета', 4],
@@ -525,6 +692,20 @@ if (db.prepare('SELECT COUNT(*) AS c FROM projects').get().c === 0) {
   const ins = db.prepare('INSERT INTO projects (name, desc, link, status, sort, ts) VALUES (?,?,?,?,?,?)');
   const t = Date.now();
   seed.forEach((s) => ins.run(s[0], s[1], s[2], s[3], s[4], t));
+}
+
+// ---------- Стартовое наполнение плейлиста NeverMusic ----------
+if (db.prepare('SELECT COUNT(*) AS c FROM tracks').get().c === 0) {
+  const seedTracks = [
+    ['Neon Drive', 'Lofi Beats', 'https://cdn.pixabay.com/download/audio/2022/03/15/audio_c8c8a73467.mp3?filename=lofi-study-112191.mp3', 'https://cdn.pixabay.com/photo/2019/04/10/11/56/audio-4114098_640.jpg', 5],
+    ['Cyber Pulse', 'Synthwave', 'https://cdn.pixabay.com/download/audio/2022/01/18/audio_d0c6ff1bab.mp3?filename=synthwave-80s-110045.mp3', 'https://cdn.pixabay.com/photo/2019/03/17/20/44/equalizer-3908832_640.jpg', 4],
+    ['Deep Space', 'Ambient', 'https://cdn.pixabay.com/download/audio/2021/11/25/audio_00fa5593f3.mp3?filename=ambient-piano-amp-strings-10711.mp3', 'https://cdn.pixabay.com/photo/2016/11/29/05/45/astronomy-1867616_640.jpg', 3],
+    ['Morning Light', 'Chill', 'https://cdn.pixabay.com/download/audio/2022/05/27/audio_1808fbf07a.mp3?filename=lofi-chill-medium-version-159456.mp3', 'https://cdn.pixabay.com/photo/2016/03/09/09/22/workplace-1245776_640.jpg', 2],
+    ['Night Runner', 'Electro', 'https://cdn.pixabay.com/download/audio/2022/10/25/audio_946bc5d4e0.mp3?filename=electronic-future-beats-117997.mp3', 'https://cdn.pixabay.com/photo/2017/08/10/08/47/laptop-2620118_640.jpg', 1]
+  ];
+  const insT = db.prepare('INSERT INTO tracks (title, artist, url, cover, sort, ts) VALUES (?,?,?,?,?,?)');
+  const tt = Date.now();
+  seedTracks.forEach((s) => insT.run(s[0], s[1], s[2], s[3], s[4], tt));
 }
 
 // ---------- Запуск ----------
