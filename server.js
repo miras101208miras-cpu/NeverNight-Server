@@ -115,6 +115,27 @@ app.get('/', (_req, res) =>
 // Health-check для хостинга / мониторинга
 app.get('/health', (_req, res) => res.json({ ok: true, uptime: process.uptime() }));
 
+// Диагностика поиска треков (какой источник отвечает с этого сервера)
+app.get('/api/music/diag', async (req, res) => {
+  const q = clean(req.query.q, 120) || 'Miyagi Captain';
+  const out = { query: q, results: {} };
+  const probes = [
+    ['deezer', () => fetch('https://api.deezer.com/search?limit=3&q=' + encodeURIComponent(q), { signal: AbortSignal.timeout(9000) })],
+    ['itunes', () => fetch('https://itunes.apple.com/search?media=music&entity=song&limit=3&term=' + encodeURIComponent(q), { signal: AbortSignal.timeout(9000) })],
+    ['spotify_token', () => fetch('https://accounts.spotify.com/api/token', { signal: AbortSignal.timeout(9000) })]
+  ];
+  for (const [name, fn] of probes) {
+    try {
+      const r = await fn();
+      out.results[name] = { status: r.status };
+    } catch (e) {
+      out.results[name] = { error: String(e && e.message || e) };
+    }
+  }
+  out.spotifyConfigured = !!(process.env.SPOTIFY_ID || (secret && secret.spotifyId));
+  res.json(out);
+});
+
 // Общие файлы экосистемы: /style.css и /app.js
 app.use(express.static(path.join(__dirname, 'public')));
 
