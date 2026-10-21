@@ -119,15 +119,25 @@ app.get('/health', (_req, res) => res.json({ ok: true, uptime: process.uptime() 
 app.get('/api/music/diag', async (req, res) => {
   const q = clean(req.query.q, 120) || 'Miyagi Captain';
   const out = { query: q, results: {} };
+  const dzUrl = 'https://api.deezer.com/search?limit=3&q=' + encodeURIComponent(q);
+  const browserUA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36';
   const probes = [
-    ['deezer', () => fetch('https://api.deezer.com/search?limit=3&q=' + encodeURIComponent(q), { signal: AbortSignal.timeout(9000) })],
+    ['deezer', () => fetch(dzUrl, { signal: AbortSignal.timeout(9000) })],
+    ['deezer_ua', () => fetch(dzUrl, { headers: { 'User-Agent': browserUA, Accept: 'application/json' }, signal: AbortSignal.timeout(9000) })],
+    ['deezer_jsonp', () => fetch(dzUrl + '&output=jsonp', { headers: { 'User-Agent': browserUA }, signal: AbortSignal.timeout(9000) })],
     ['itunes', () => fetch('https://itunes.apple.com/search?media=music&entity=song&limit=3&term=' + encodeURIComponent(q), { signal: AbortSignal.timeout(9000) })],
     ['spotify_token', () => fetch('https://accounts.spotify.com/api/token', { signal: AbortSignal.timeout(9000) })]
   ];
   for (const [name, fn] of probes) {
     try {
       const r = await fn();
-      out.results[name] = { status: r.status };
+      const info = { status: r.status };
+      if (r.ok) {
+        const txt = await r.text();
+        info.bodyStart = txt.slice(0, 60);
+        info.hasPreview = txt.includes('"preview"');
+      }
+      out.results[name] = info;
     } catch (e) {
       out.results[name] = { error: String(e && e.message || e) };
     }
