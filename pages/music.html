@@ -173,7 +173,7 @@
     <div class="foot">NeverMusic · EcosystemNever</div>
   </div>
 
-  <audio id="audio" preload="metadata"></audio>
+  <audio id="audio" preload="metadata" crossorigin="anonymous"></audio>
 
   <link rel="stylesheet" href="/style.css">
   <script src="/app.js" defer></script>
@@ -212,6 +212,14 @@
     const t = tracks[i];
     if (!t) return;
     idx = i;
+    // crossorigin="anonymous" нужен, чтобы Web Audio (визуализатор) не глушил
+    // треки с чужих доменов. Если источник не отдаёт CORS — грузим без него.
+    const sameOrigin = t.url.startsWith('/');
+    if (sameOrigin || /^https:\/\/(audio-ssl\.itunes\.apple\.com|cdnt-preview\.dzcdn\.net|p\.scdn\.co)/i.test(t.url)) {
+      audio.crossOrigin = 'anonymous';
+    } else {
+      audio.removeAttribute('crossorigin');
+    }
     audio.src = t.url;
     $('nowTitle').textContent = t.title;
     $('nowArtist').textContent = t.artist || 'Неизвестен';
@@ -219,6 +227,12 @@
     cov.innerHTML = t.cover ? '<img src="' + esc(t.cover) + '" alt="">' : '🎵';
     render();
   }
+
+  // Понятное сообщение вместо тишины, если трек не загрузился
+  audio.addEventListener('error', () => {
+    if (!audio.src) return;
+    $('nowArtist').textContent = '⚠ Не удалось загрузить трек — попробуй другой';
+  });
 
   function playAt(i) {
     load(i);

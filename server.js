@@ -121,10 +121,18 @@ app.get('/api/music/diag', async (req, res) => {
   const out = { query: q, results: {} };
   const dzUrl = 'https://api.deezer.com/search?limit=3&q=' + encodeURIComponent(q);
   const browserUA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/122.0 Safari/537.36';
+  const proxies = [
+    ['px_allorigins', 'https://api.allorigins.win/raw?url=' + encodeURIComponent(dzUrl)],
+    ['px_codetabs', 'https://api.codetabs.com/v1/proxy?quest=' + encodeURIComponent(dzUrl)],
+    ['px_corsproxy', 'https://corsproxy.io/?' + encodeURIComponent(dzUrl)],
+    ['px_thingproxy', 'https://thingproxy.freeboard.io/fetch/' + dzUrl],
+    ['px_isomorphic', 'https://cors.isomorphic-git.org/' + dzUrl]
+  ];
   const probes = [
     ['deezer', () => fetch(dzUrl, { signal: AbortSignal.timeout(9000) })],
     ['deezer_ua', () => fetch(dzUrl, { headers: { 'User-Agent': browserUA, Accept: 'application/json' }, signal: AbortSignal.timeout(9000) })],
     ['deezer_jsonp', () => fetch(dzUrl + '&output=jsonp', { headers: { 'User-Agent': browserUA }, signal: AbortSignal.timeout(9000) })],
+    ...proxies.map(([n, u]) => [n, () => fetch(u, { headers: { 'User-Agent': browserUA }, signal: AbortSignal.timeout(9000) })]),
     ['itunes', () => fetch('https://itunes.apple.com/search?media=music&entity=song&limit=3&term=' + encodeURIComponent(q), { signal: AbortSignal.timeout(9000) })],
     ['spotify_token', () => fetch('https://accounts.spotify.com/api/token', { signal: AbortSignal.timeout(9000) })]
   ];
@@ -867,31 +875,16 @@ async function searchSpotify(query) {
   };
 }
 
-// Превью от iTunes отдаётся в формате .m4a (audio/x-m4p) — большинство браузеров
-// его НЕ воспроизводит. Поэтому такие треки не добавляем: пользователь не услышит звук.
-function isPlayableUrl(url) {
-  const u = String(url || '').toLowerCase().split('?')[0];
-  if (!u) return false;
-  if (u.endsWith('.mp3')) return true;
-  if (u.endsWith('.m4a') || u.endsWith('.aac') || u.endsWith('.m4p')) return false;
-  return true; // неизвестное расширение — не блокируем
-}
-
-// Ищем трек по всем источникам: Spotify (если настроен) → Deezer → iTunes.
-// Треки, которые браузер не сыграет (.m4a), пропускаем.
+// Ищем трек по всем источникам: Spotify (если настроен) → Deezer → iTunes
 async function searchTrack(query) {
   const chain = [searchSpotify, searchDeezer, searchItunes];
-  let fallback = null;
   for (const fn of chain) {
     try {
       const t = await fn(query);
-      if (!t) continue;
-      if (isPlayableUrl(t.url)) return t;
-      // запомним как запасной вариант, но продолжим искать играбельный
-      if (!fallback) fallback = t;
+      if (t) return t;
     } catch (e) { /* пробуем следующий источник */ }
   }
-  return fallback;
+  return null;
 }
 
 async function assistAddTrack(text) {
@@ -912,9 +905,8 @@ async function assistAddTrack(text) {
   const info = db.prepare('INSERT INTO tracks (title, artist, url, cover, sort, ts) VALUES (?,?,?,?,?,?)')
     .run(t.title, t.artist, t.url, t.cover, 0, ts);
   notifyTelegram(`🎵 Never Assist добавил трек: «${t.title}» — ${t.artist} (${t.source})`);
-  const warn = isPlayableUrl(t.url) ? '' : '\n⚠ Превью этого трека в формате, который браузер может не воспроизвести.';
   return {
-    answer: `🎵 Добавил в плейлист: «${t.title}» — ${t.artist}${t.album ? '\n💿 ' + t.album : ''}${warn}\nПослушать можно на странице NeverMusic: /music`,
+    answer: `🎵 Добавил в плейлист: «${t.title}» — ${t.artist}${t.album ? '\n💿 ' + t.album : ''}\nПослушать можно на странице NeverMusic: /music`,
     track: { id: info.lastInsertRowid, title: t.title, artist: t.artist, url: t.url, cover: t.cover, source: t.source },
     added: true
   };
