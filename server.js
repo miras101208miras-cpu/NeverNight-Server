@@ -606,7 +606,7 @@ const AI_KB = [
   },
   {
     keys: ['помощь', 'help', 'что умеешь', 'команд'],
-    a: 'Я умею:\n• рассказать про проекты, сервисы и технологии\n• подсказать контакты NeverNight\n• ответить про хостинг, базу данных и стек\n• добавить музыку — напиши «добавь трек <название>», и я найду его и добавлю в NeverMusic 🎵\nСпрашивай своими словами!'
+    a: 'Я умею:\n• считать примеры — «сколько будет 2+2», «(10*3)/5»\n• подсказывать время и дату\n• рассказывать про проекты, сервисы и технологии\n• подсказать контакты NeverNight\n• добавить музыку — «добавь трек <название>» 🎵\nСпрашивай своими словами!'
   },
   {
     keys: ['never assist', 'neverassist', 'ассистент', 'помощник'],
@@ -614,10 +614,127 @@ const AI_KB = [
   }
 ];
 
+// ============================================================
+//  Мини-«мозг» ассистента: математика (без eval), время, дата
+// ============================================================
+// Безопасный парсер выражений: + - * / % ^ ( ) и десятичные числа.
+function calcExpression(expr) {
+  const s = String(expr).replace(/,/g, '.').replace(/[×х]/gi, '*').replace(/÷/g, '/').replace(/–|—/g, '-').trim();
+  if (!/^[0-9+\-*/%^().\s]+$/.test(s)) return null;
+  if (!/[0-9]/.test(s) || !/[+\-*/%^]/.test(s)) return null;
+
+  const tokens = s.match(/\d+\.?\d*|[+\-*/%^()]/g);
+  if (!tokens) return null;
+
+  // Shunting-yard
+  const prec = { '+': 1, '-': 1, '*': 2, '/': 2, '%': 2, '^': 3 };
+  const out = [], ops = [];
+  let prev = null;
+  for (let i = 0; i < tokens.length; i++) {
+    let t = tokens[i];
+    if (/^\d/.test(t)) { out.push(parseFloat(t)); prev = 'num'; continue; }
+    if (t === '(') { ops.push(t); prev = '('; continue; }
+    if (t === ')') {
+      while (ops.length && ops[ops.length - 1] !== '(') out.push(ops.pop());
+      if (!ops.length) return null;
+      ops.pop(); prev = ')'; continue;
+    }
+    // унарный минус: -3 или (-3)
+    if (t === '-' && (prev === null || prev === '(' || prev === 'op')) { out.push(0); }
+    while (ops.length) {
+      const top = ops[ops.length - 1];
+      if (top === '(') break;
+      const rightAssoc = t === '^';
+      if (prec[top] > prec[t] || (prec[top] === prec[t] && !rightAssoc)) out.push(ops.pop());
+      else break;
+    }
+    ops.push(t); prev = 'op';
+  }
+  while (ops.length) {
+    const op = ops.pop();
+    if (op === '(') return null;
+    out.push(op);
+  }
+  // Считаем RPN
+  const st = [];
+  for (const t of out) {
+    if (typeof t === 'number') { st.push(t); continue; }
+    const b = st.pop(), a = st.pop();
+    if (a === undefined || b === undefined) return null;
+    switch (t) {
+      case '+': st.push(a + b); break;
+      case '-': st.push(a - b); break;
+      case '*': st.push(a * b); break;
+      case '/': if (b === 0) return null; st.push(a / b); break;
+      case '%': if (b === 0) return null; st.push(a % b); break;
+      case '^': st.push(Math.pow(a, b)); break;
+      default: return null;
+    }
+  }
+  if (st.length !== 1) return null;
+  const val = st[0];
+  if (!isFinite(val)) return null;
+  return Math.round(val * 1e10) / 1e10;
+}
+
+function tryMath(q) {
+  // 0) проценты: "15% от 200", "20 % от 150", "сколько процентов ... " (только «X% от Y»)
+  const pct = q.match(/(\d+\.?\d*)\s*%\s*(?:от|of)\s*(\d+\.?\d*)/i);
+  if (pct) {
+    const res = (parseFloat(pct[1]) / 100) * parseFloat(pct[2]);
+    return Math.round(res * 1e10) / 1e10;
+  }
+
+  // 1) явный калькулятор: "сколько будет 2+2", "посчитай 10*3", "(2+3)*4"
+  let expr = q;
+  const prep = expr.match(/(?:сколько\s+будет|посчитай|вычисли|реши|calculate|равно)\s*(.+)/i);
+  if (prep) expr = prep[1];
+  // убираем вопросительные знаки и слова
+  expr = expr.replace(/[?=]/g, ' ').replace(/\b(будет|это|пожалуйста|мне|скажи)\b/gi, ' ').trim();
+  // если есть хотя бы одна цифра и один оператор — пробуем посчитать целиком
+  if (/[0-9]/.test(expr) && /[+\-*/%^×÷х]/.test(expr)) {
+    const only = expr.replace(/[^0-9+\-*/%^().\s×÷х–—]/g, ' ').trim();
+    const v = calcExpression(only);
+    if (v !== null) return v;
+  }
+  return null;
+}
+
+function fmtNum(n) {
+  return (Math.abs(n % 1) < 1e-9) ? String(Math.round(n)) : String(n);
+}
+
+function extraReply(text) {
+  const q = String(text || '').toLowerCase().trim();
+
+  // Математика
+  const math = tryMath(q);
+  if (math !== null) {
+    return { answer: `🧮 ${fmtNum(math)}` };
+  }
+
+  // Время / дата (Москва)
+  if (/(сколько времени|который час|текущее время|what time)/i.test(q)) {
+    const t = new Date().toLocaleString('ru-RU', { timeZone: 'Europe/Moscow', hour: '2-digit', minute: '2-digit' });
+    return { answer: `🕒 Сейчас ${t} (МСК)` };
+  }
+  if (/(какое сегодня число|какая дата|какой сегодня день|what date)/i.test(q)) {
+    const d = new Date().toLocaleDateString('ru-RU', { timeZone: 'Europe/Moscow', weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+    return { answer: `📅 Сегодня ${d}` };
+  }
+
+  return null;
+}
+
 function aiReply(text) {
   const q = String(text || '').toLowerCase().trim();
   if (!q) return 'Напиши вопрос — и я отвечу 🙂';
   if (q.length > 500) return 'Слишком длинный вопрос — попробуй короче.';
+
+  // Сначала «мозг»: математика, время, дата
+  const extra = extraReply(q);
+  if (extra) return extra.answer;
+
   for (const item of AI_KB) {
     for (const k of item.keys) {
       if (q.includes(k)) return item.a;
