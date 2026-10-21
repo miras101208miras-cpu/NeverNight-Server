@@ -187,8 +187,8 @@
       '</div>' +
       '<div class="na-chat" id="na-chat"></div>' +
       '<div class="na-chips">' +
-        '<button class="na-chip" data-q="добавь трек Blinding Lights">🎵 Добавить трек</button>' +
         '<button class="na-chip" data-q="Какие есть проекты?">🗂 Проекты</button>' +
+        '<button class="na-chip" data-q="Сколько будет 15% от 200?">🧮 Посчитать</button>' +
         '<button class="na-chip" data-q="Как связаться?">📬 Контакты</button>' +
       '</div>' +
       '<form class="na-form" id="na-form">' +
@@ -241,7 +241,7 @@
     function greet() {
       if (greeted) return;
       greeted = true;
-      addMsg('ai', 'Привет! 👋 Я Never Assist — ассистент EcosystemNever.\nСпроси меня о чём угодно: проекты, сервисы, технологии, контакты. А ещё я умею добавлять музыку — напиши «добавь трек <название>» 🎵');
+      addMsg('ai', 'Привет! 👋 Я Never Assist — ассистент EcosystemNever.\nСпроси меня о чём угодно: проекты, сервисы, технологии, контакты. Умею считать примеры и подсказывать время 🧮\nМогу и музыку добавить — напиши «добавь трек <название>» 🎵');
     }
 
     async function ask(text) {

@@ -94,7 +94,7 @@
     <div>
       <div class="tag">// Ассистент экосистемы</div>
       <h1>Never<span>Assist</span></h1>
-      <p class="sub">Ассистент экосистемы EcosystemNever: отвечает на вопросы о проектах, технологиях и контактах. Умеет искать музыку — просто напиши «добавь трек &lt;название&gt;».</p>
+      <p class="sub">Ассистент экосистемы EcosystemNever: отвечает на любые вопросы о проектах, сервисах, технологиях и контактах, умеет считать примеры и подсказывать время. Спрашивай своими словами.</p>
     </div>
 
     <div class="chat-shell">
@@ -109,9 +109,9 @@
       <div class="chat" id="chat"></div>
 
       <div class="chips" id="chips">
-        <button class="chip-btn" data-q="добавь трек Blinding Lights">🎵 Добавить трек</button>
         <button class="chip-btn" data-q="Какие есть проекты?">🗂 Какие есть проекты?</button>
         <button class="chip-btn" data-q="Что умеешь?">💡 Что умеешь?</button>
+        <button class="chip-btn" data-q="Сколько будет 15% от 200?">🧮 Посчитать</button>
         <button class="chip-btn" data-q="Как связаться с NeverNight?">📬 Контакты</button>
         <button class="chip-btn" data-q="На чём написан сервер?">⚙️ Технологии</button>
       </div>
@@ -214,7 +214,7 @@
       const h = await (await fetch('/api/ai/history?session=' + encodeURIComponent(session))).json();
       if (h.length) { h.forEach((m) => addMsg(m.role, m.text)); }
       else {
-        addMsg('ai', 'Привет! 👋 Я Never Assist — ассистент экосистемы EcosystemNever. Спроси о чём угодно: проекты, сервисы, технологии, контакты. А ещё я умею добавлять музыку — напиши «добавь трек <название>» 🎵');
+        addMsg('ai', 'Привет! 👋 Я Never Assist — ассистент экосистемы EcosystemNever. Спроси о чём угодно: проекты, сервисы, технологии, контакты. Умею считать примеры и подсказывать время 🧮');
       }
     } catch (e) {
       addMsg('ai', 'Привет! 👋 Я Never Assist — ассистент экосистемы EcosystemNever.');
