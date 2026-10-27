@@ -771,6 +771,44 @@ const AI_SYSTEM_PROMPT = `Ты — Never Assist, официальный кибе
 Стек: Node.js, Express, Socket.IO, SQLite, Canvas API, Telegram Bot API, Render, GitHub Pages.
 Фишка: если пользователь хочет добавить музыку в плейлист, он может написать «добавь трек <название>», и ты добавишь её в NeverMusic!`;
 
+async function queryGemini(userText, historyRows) {
+  const key = process.env.GEMINI_API_KEY || (secret && secret.geminiApiKey);
+  if (!key) return null;
+  const contents = [];
+  for (const row of historyRows) {
+    contents.push({
+      role: row.role === 'ai' ? 'model' : 'user',
+      parts: [{ text: row.text }]
+    });
+  }
+  contents.push({
+    role: 'user',
+    parts: [{ text: userText }]
+  });
+
+  const r = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent?key=${key}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      system_instruction: { parts: [{ text: AI_SYSTEM_PROMPT }] },
+      contents,
+      generationConfig: { temperature: 0.7, maxOutputTokens: 1000 }
+    }),
+    signal: AbortSignal.timeout(12000)
+  });
+  if (!r.ok) {
+    const err = await r.text().catch(() => '');
+    console.warn(`[Gemini] HTTP ${r.status}: ${err}`);
+    return null;
+  }
+  const data = await r.json();
+  const cand = data.candidates && data.candidates[0];
+  if (cand && cand.content && cand.content.parts && cand.content.parts[0]) {
+    return cand.content.parts[0].text.trim();
+  }
+  return null;
+}
+
 async function queryDeepSeek(messages) {
   const key = process.env.DEEPSEEK_API_KEY || (secret && secret.deepseekApiKey);
   if (!key) return null;
@@ -876,7 +914,15 @@ async function askSmartAI(userText, session) {
   }
   messages.push({ role: 'user', content: q });
 
-  // 3. Первый приоритет: официальный DeepSeek API (если задан ключ)
+  // 3. Первый приоритет: официальный Google Gemini API (если задан ключ)
+  try {
+    const geminiReply = await queryGemini(q, historyRows);
+    if (geminiReply) return geminiReply;
+  } catch (e) {
+    console.warn('[SmartAI] Gemini fail:', e.message);
+  }
+
+  // 4. Второй приоритет: официальный DeepSeek API (если задан ключ)
   try {
     const dsReply = await queryDeepSeek(messages);
     if (dsReply) return dsReply;
