@@ -600,7 +600,7 @@ const AI_KB = [
   },
   {
     keys: ['домен', 'адрес', 'ссылка на сайт', 'сайт'],
-    a: '🌐 Экосистема живёт на nevernight-server.onrender.com, портфолио — на GitHub Pages. Скоро будет красивый адрес nevernight.is-a.dev (заявка уже подана).'
+    a: '🌐 Официальный сайт экосистемы: https://nevernight.is-a.dev (с активным SSL). Сервер и сервисы работают на https://nevernight-server.onrender.com.'
   },
   {
     keys: ['технолог', 'стек', 'на чем', 'на чём', 'написан'],
@@ -744,7 +744,92 @@ function extraReply(text) {
   return null;
 }
 
-function aiReply(text) {
+const AI_SYSTEM_PROMPT = `Ты — Never Assist, официальный кибер-ассистент экосистемы EcosystemNever и портала NeverNight (https://nevernight.is-a.dev).
+Твой создатель и разработчик: NeverNight (Miras, Telegram: @light18101, телефон: +7 775 087 60 34, GitHub: github.com/miras101208miras-cpu).
+
+Характер и стиль:
+- Умный, дружелюбный и технологичный кибер-ассистент с неоново-киберпанковым вайбом.
+- Используй умеренно стильные эмодзи (🤖, ⚡, 🚀, 💬, 🎵, 🛡️).
+- Отвечай понятно, структурированно, без лишней "воды", на русском языке (или на языке вопроса).
+- Ты отлично программируешь (Node.js, Express, Socket.IO, JavaScript, HTML/CSS, Python, SQLite), можешь писать и объяснять код, решать задачи, подсказывать идеи для развития проектов.
+
+Проекты экосистемы:
+1. nevernight.is-a.dev — главное портфолио NeverNight со всеми 22 проектами, 3D калькулятором и интерактивом.
+2. EcosystemNever — портал экосистемы (miras101208miras-cpu.github.io/EcosystemNever/).
+3. Demon Slayer — интерактивный фан-сайт по вселенной «Клинок, рассекающий демонов» со всеми стилями дыхания и катаной (miras101208miras-cpu.github.io/NeverProduct-Demon-Slayer/).
+4. NeverParty — синхронный кибер-кинотеатр через MQTT WebSocket.
+5. NeverChat — анонимный реалтайм-чат на Socket.IO с комнатами (/chat).
+6. NeverMusic — неоновый музыкальный плеер с общим плейлистом и поиском (/music).
+7. NeverGame — неоновая Canvas-аркада с таблицей лидеров (/game).
+8. NeverWall — стена идей и голосований (/wall).
+9. NeverGuestbook — гостевая книга портала (/guestbook).
+10. NeverPing — статус всех сервисов экосистемы (/status).
+11. NeverProjects — каталог проектов (/projects).
+12. NeverStats — веб-аналитика экосистемы (/stats).
+13. Telegram-бот: @ecosystem_never_bot — ассистент и уведомления.
+
+Стек: Node.js, Express, Socket.IO, SQLite, Canvas API, Telegram Bot API, Render, GitHub Pages.
+Фишка: если пользователь хочет добавить музыку в плейлист, он может написать «добавь трек <название>», и ты добавишь её в NeverMusic!`;
+
+async function queryDeepSeek(messages) {
+  const key = process.env.DEEPSEEK_API_KEY || (secret && secret.deepseekApiKey);
+  if (!key) return null;
+  const r = await fetch('https://api.deepseek.com/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      Authorization: `Bearer ${key}`
+    },
+    body: JSON.stringify({
+      model: 'deepseek-chat',
+      messages,
+      temperature: 0.7,
+      max_tokens: 1000
+    }),
+    signal: AbortSignal.timeout(18000)
+  });
+  if (!r.ok) {
+    const errText = await r.text().catch(() => '');
+    console.warn(`[DeepSeek] HTTP ${r.status}: ${errText}`);
+    return null;
+  }
+  const data = await r.json();
+  const choice = data.choices && data.choices[0];
+  if (choice && choice.message && choice.message.content) {
+    return choice.message.content.trim();
+  }
+  return null;
+}
+
+async function queryFreeNeural(messages) {
+  const r = await fetch('https://text.pollinations.ai/', {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      messages,
+      model: 'openai-fast'
+    }),
+    signal: AbortSignal.timeout(16000)
+  });
+  if (!r.ok) {
+    const errText = await r.text().catch(() => '');
+    console.warn(`[FreeNeural] HTTP ${r.status}: ${errText}`);
+    return null;
+  }
+  const text = await r.text();
+  if (text && !text.startsWith('{') && text.trim().length > 0) {
+    return text.trim();
+  }
+  try {
+    const json = JSON.parse(text);
+    if (json && json.choices && json.choices[0] && json.choices[0].message) {
+      return json.choices[0].message.content.trim();
+    }
+  } catch (e) {}
+  return text.trim();
+}
+
+function localAiReply(text) {
   const q = String(text || '').toLowerCase().trim();
   if (!q) return 'Напиши вопрос — и я отвечу 🙂';
   if (q.length > 500) return 'Слишком длинный вопрос — попробуй короче.';
@@ -763,6 +848,52 @@ function aiReply(text) {
     return 'Хм, не уверен, что понял 🤔 Попробуй спросить про: проекты, чат, музыку, статус, технологии, контакты или админку. Или напиши «помощь».';
   }
   return 'Не понял запрос 🤔 Напиши «помощь» — покажу, о чём можно спросить.';
+}
+
+async function askSmartAI(userText, session) {
+  const q = String(userText || '').trim();
+  if (!q) return 'Напиши вопрос — и я отвечу 🙂';
+
+  // 1. Мгновенные ответы на вычисления, время и дату (0ms)
+  const extra = extraReply(q);
+  if (extra) return extra.answer;
+
+  // 2. Формируем контекст диалога с историей (последние 6 сообщений)
+  let historyRows = [];
+  try {
+    historyRows = db.prepare('SELECT role, text FROM ai_messages WHERE session = ? ORDER BY id DESC LIMIT 6').all(session);
+    historyRows.reverse();
+  } catch (e) {}
+
+  const messages = [
+    { role: 'system', content: AI_SYSTEM_PROMPT }
+  ];
+  for (const row of historyRows) {
+    messages.push({
+      role: row.role === 'ai' ? 'assistant' : 'user',
+      content: row.text
+    });
+  }
+  messages.push({ role: 'user', content: q });
+
+  // 3. Первый приоритет: официальный DeepSeek API (если задан ключ)
+  try {
+    const dsReply = await queryDeepSeek(messages);
+    if (dsReply) return dsReply;
+  } catch (e) {
+    console.warn('[SmartAI] DeepSeek fail:', e.message);
+  }
+
+  // 4. Второй приоритет: бесплатный нейросетевой шлюз (без ключа)
+  try {
+    const fnReply = await queryFreeNeural(messages);
+    if (fnReply && fnReply.length > 2) return fnReply;
+  } catch (e) {
+    console.warn('[SmartAI] FreeNeural fail:', e.message);
+  }
+
+  // 5. Третий приоритет (оффлайн-фоллбэк): локальная база знаний
+  return localAiReply(q);
 }
 
 // ============================================================
@@ -932,7 +1063,7 @@ app.post('/api/ai', async (req, res) => {
       track = r.track;
     }
   } else {
-    answer = aiReply(text);
+    answer = await askSmartAI(text, session);
   }
 
   ins.run(session, 'ai', answer, ts + 1);
