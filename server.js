@@ -1036,10 +1036,10 @@ if (db.prepare('SELECT COUNT(*) AS c FROM projects').get().c === 0) {
     ['NeverGame', 'Неоновая мини-игра с таблицей рекордов', '/game', 'Онлайн', 7],
     ['Never Assist', 'Ассистент экосистемы: сам ищет и добавляет треки', '/ai', 'Онлайн', 7],
     ['NeverMusic', 'Музыкальный плеер с общим плейлистом', '/music', 'Онлайн', 7],
-    ['NeverChat', 'Анонимный чат в реальном времени', '/chat', 'Бета', 6],
-    ['NeverWall', 'Стена идей с голосованием', '/wall', 'Бета', 5],
-    ['NeverGuestbook', 'Гостевая книга экосистемы', '/guestbook', 'Бета', 4],
-    ['NeverPing', 'Мониторинг сервисов', '/status', 'Бета', 3],
+    ['NeverChat', 'Анонимный чат в реальном времени', '/chat', 'Онлайн', 6],
+    ['NeverWall', 'Стена идей с голосованием', '/wall', 'Онлайн', 5],
+    ['NeverGuestbook', 'Гостевая книга экосистемы', '/guestbook', 'Онлайн', 4],
+    ['NeverPing', 'Мониторинг сервисов', '/status', 'Онлайн', 3],
     ['Telegram-бот', 'Бот экосистемы @ecosystem_never_bot', 'https://t.me/ecosystem_never_bot', 'Онлайн', 2]
   ];
   const ins = db.prepare('INSERT INTO projects (name, desc, link, status, sort, ts) VALUES (?,?,?,?,?,?)');
