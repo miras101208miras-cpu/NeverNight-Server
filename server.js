@@ -351,6 +351,8 @@ app.get('/ai', (_req, res) =>
   res.sendFile(path.join(__dirname, 'pages', 'ai.html')));
 app.get('/music', (_req, res) =>
   res.sendFile(path.join(__dirname, 'pages', 'music.html')));
+app.get('/launcher', (_req, res) =>
+  res.redirect('https://nevernight.is-a.dev/launcher.html'));
 
 // ============================================================
 //  NeverPing — мониторинг сервисов экосистемы
@@ -358,7 +360,8 @@ app.get('/music', (_req, res) =>
 const SELF_URL = process.env.RENDER_EXTERNAL_URL || `http://localhost:${PORT}`;
 const TARGETS = [
   { name: 'EcosystemNever',   url: 'https://miras101208miras-cpu.github.io/EcosystemNever/' },
-  { name: 'Портфолио',        url: 'https://miras101208miras-cpu.github.io/NeverNight-Portfolio/' },
+  { name: 'Портфолио',        url: 'https://nevernight.is-a.dev' },
+  { name: 'NeverLauncher',    url: 'https://nevernight.is-a.dev/launcher.html' },
   { name: 'NeverProduct: DS', url: 'https://miras101208miras-cpu.github.io/NeverProduct-Demon-Slayer/' },
   { name: 'NeverParty',       url: 'https://miras101208miras-cpu.github.io/EcosystemNever/party/index.html' },
   { name: 'NeverChat',        url: `${SELF_URL}/chat` },
@@ -1206,6 +1209,7 @@ app.delete('/api/admin/chat/:id', requireAdmin, (req, res) => {
 // ---------- Стартовое наполнение каталога проектов ----------
 if (db.prepare('SELECT COUNT(*) AS c FROM projects').get().c === 0) {
   const seed = [
+    ['NeverLauncher', 'Официальный Minecraft клиент и лаунчер экосистемы', 'https://nevernight.is-a.dev/launcher.html', 'Онлайн', 11],
     ['EcosystemNever', 'Главный сайт экосистемы NeverProduct', 'https://miras101208miras-cpu.github.io/EcosystemNever/', 'Онлайн', 10],
     ['NeverNight Portfolio', 'Портфолио NeverNight со всеми проектами и демо', 'https://miras101208miras-cpu.github.io/NeverNight-Portfolio/', 'Онлайн', 9],
     ['Demon Slayer', 'Фан-сайт по «Клинку, рассекающему демонов»', 'https://miras101208miras-cpu.github.io/NeverProduct-Demon-Slayer/', 'Онлайн', 8],
