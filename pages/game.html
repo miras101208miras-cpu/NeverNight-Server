@@ -3,49 +3,137 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>NeverGame — Мини-игра EcosystemNever</title>
+  <title>Cyberpunk Survivors — NeverGame</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&family=Montserrat:wght@600;800&family=Syne:wght@700;800&display=swap" rel="stylesheet">
   <style>
     .wrap { display: flex; flex-direction: column; gap: 18px; }
-    .game-layout { display: grid; grid-template-columns: 1fr 260px; gap: 18px; }
+    .game-layout { display: grid; grid-template-columns: 1fr 280px; gap: 18px; }
     .stage {
-      position: relative; background: #04060a; border: 1px solid var(--border);
-      border-radius: 18px; overflow: hidden; box-shadow: 0 15px 40px rgba(0,0,0,0.5);
-      aspect-ratio: 4 / 3; min-height: 340px;
+      position: relative; background: #030712; border: 1px solid var(--border);
+      border-radius: 18px; overflow: hidden; box-shadow: 0 15px 40px rgba(0,0,0,0.6);
+      aspect-ratio: 16 / 10; min-height: 440px; touch-action: none;
     }
     canvas { display: block; width: 100%; height: 100%; touch-action: none; cursor: crosshair; }
 
-    /* HUD */
-    .hud { position: absolute; top: 0; left: 0; right: 0; padding: 12px 16px; display: flex; justify-content: space-between; align-items: flex-start; pointer-events: none; }
+    /* Верхний HUD */
+    .hud {
+      position: absolute; top: 0; left: 0; right: 0; padding: 12px 16px;
+      display: flex; justify-content: space-between; align-items: flex-start;
+      pointer-events: none; z-index: 4;
+    }
     .hud-block { font-family: 'JetBrains Mono', monospace; }
-    .hud-val { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.5rem; line-height: 1; color: #fff; }
-    .hud-lbl { font-size: 0.58rem; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; }
+    .hud-val { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.45rem; line-height: 1; color: #fff; text-shadow: 0 0 10px rgba(0,240,255,0.4); }
+    .hud-lbl { font-size: 0.58rem; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; margin-top: 3px; }
+    .hud-center { text-align: center; }
     .hud-right { text-align: right; }
-    .combo { position: absolute; top: 50%; left: 50%; transform: translate(-50%,-50%); font-family: 'Syne', sans-serif; font-weight: 800; font-size: 2rem; color: #f59e0b; opacity: 0; pointer-events: none; transition: opacity 0.2s; text-shadow: 0 0 20px rgba(245,158,11,0.8); }
 
-    /* Жизни */
-    .lives { position: absolute; bottom: 12px; left: 16px; display: flex; gap: 6px; pointer-events: none; }
-    .life { width: 14px; height: 14px; border-radius: 3px; background: linear-gradient(135deg,#00f0ff,#a855f7); box-shadow: 0 0 10px rgba(0,240,255,0.6); }
-    .life.off { background: rgba(255,255,255,0.1); box-shadow: none; }
+    /* Полоса опыта */
+    .xp-bar-wrap {
+      position: absolute; top: 0; left: 0; right: 0; height: 6px;
+      background: rgba(255,255,255,0.06); z-index: 6; pointer-events: none;
+    }
+    .xp-bar-fill {
+      height: 100%; width: 0%;
+      background: linear-gradient(90deg, #00f0ff, #a855f7);
+      box-shadow: 0 0 10px rgba(0,240,255,0.8);
+      transition: width 0.15s ease-out;
+    }
 
-    /* Оверлеи */
-    .screen { position: absolute; inset: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 14px; text-align: center; padding: 24px; background: rgba(4,6,10,0.88); backdrop-filter: blur(6px); z-index: 5; }
-    html.light .screen { background: rgba(230,236,248,0.9); }
+    /* Полоса здоровья игрока */
+    .hp-box {
+      display: flex; align-items: center; gap: 8px; margin-top: 4px;
+    }
+    .hp-bar {
+      width: 100px; height: 8px; border-radius: 4px;
+      background: rgba(255,255,255,0.1); overflow: hidden;
+      border: 1px solid rgba(255,255,255,0.2);
+    }
+    .hp-fill {
+      height: 100%; width: 100%;
+      background: linear-gradient(90deg, #22c55e, #10b981);
+      transition: width 0.12s;
+    }
+
+    /* Звуковой тумблер */
+    .sound-btn {
+      position: absolute; bottom: 12px; right: 14px; z-index: 6;
+      background: rgba(15,23,42,0.7); border: 1px solid var(--border);
+      border-radius: 10px; color: var(--text); padding: 6px 10px;
+      font-size: 0.85rem; cursor: pointer; backdrop-filter: blur(8px);
+      transition: all 0.2s;
+    }
+    .sound-btn:hover { border-color: var(--cyan); }
+
+    /* Оверлеи экранов */
+    .screen {
+      position: absolute; inset: 0; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 14px; text-align: center;
+      padding: 24px; background: rgba(3,7,18,0.92); backdrop-filter: blur(8px); z-index: 10;
+    }
     .screen.hidden { display: none; }
-    .screen h2 { font-family: 'Syne', sans-serif; font-size: clamp(1.5rem, 5vw, 2.2rem); font-weight: 800; }
-    .screen h2 span { background: linear-gradient(135deg, var(--cyan), var(--purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .screen p { color: var(--muted); font-size: 0.88rem; max-width: 420px; line-height: 1.6; }
-    .hint { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--cyan); letter-spacing: 1px; }
-    .final-score { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 3rem; background: linear-gradient(135deg, var(--cyan), var(--purple)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
-    .name-input { padding: 11px 16px; border-radius: 12px; background: var(--input-bg); border: 1px solid var(--border); color: var(--text); font-family: 'JetBrains Mono', monospace; text-align: center; outline: none; width: 220px; }
+    .screen h2 {
+      font-family: 'Syne', sans-serif; font-size: clamp(1.6rem, 5vw, 2.3rem); font-weight: 800; margin: 0;
+    }
+    .screen h2 span {
+      background: linear-gradient(135deg, var(--cyan), var(--purple));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .screen p { color: var(--muted); font-size: 0.88rem; max-width: 440px; line-height: 1.6; margin: 0; }
+    .controls-hint {
+      display: flex; gap: 10px; flex-wrap: wrap; justify-content: center;
+      font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--cyan);
+      background: rgba(0,240,255,0.06); padding: 8px 14px; border-radius: 10px;
+      border: 1px solid rgba(0,240,255,0.2);
+    }
+    .final-score {
+      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 3rem;
+      background: linear-gradient(135deg, var(--cyan), var(--purple));
+      -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+    }
+    .name-input {
+      padding: 11px 16px; border-radius: 12px; background: var(--input-bg);
+      border: 1px solid var(--border); color: var(--text); font-family: 'JetBrains Mono', monospace;
+      text-align: center; outline: none; width: 220px;
+    }
     .name-input:focus { border-color: rgba(0,240,255,0.5); }
-    .rank-note { font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; color: #10b981; min-height: 18px; }
+    .rank-note { font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; color: #10b981; min-height: 18px; }
+
+    /* Меню прокачки при Level Up */
+    .upgrade-screen {
+      position: absolute; inset: 0; background: rgba(3,7,18,0.88);
+      backdrop-filter: blur(10px); z-index: 9; display: flex; flex-direction: column;
+      align-items: center; justify-content: center; gap: 18px; padding: 20px;
+    }
+    .upgrade-title {
+      font-family: 'Syne', sans-serif; font-weight: 800; font-size: 1.6rem;
+      color: #00f0ff; text-shadow: 0 0 15px rgba(0,240,255,0.5);
+    }
+    .upgrade-cards {
+      display: grid; grid-template-columns: repeat(3, 1fr); gap: 14px;
+      max-width: 600px; width: 100%;
+    }
+    .up-card {
+      background: rgba(15,23,42,0.85); border: 1px solid rgba(0,240,255,0.3);
+      border-radius: 16px; padding: 16px 14px; cursor: pointer; text-align: center;
+      transition: all 0.2s ease; display: flex; flex-direction: column; align-items: center; gap: 8px;
+    }
+    .up-card:hover {
+      transform: translateY(-4px); border-color: #00f0ff;
+      box-shadow: 0 0 25px rgba(0,240,255,0.35); background: rgba(0,240,255,0.1);
+    }
+    .up-icon { font-size: 2rem; }
+    .up-name { font-family: 'Syne', sans-serif; font-weight: 800; font-size: 0.95rem; color: #fff; }
+    .up-desc { font-size: 0.74rem; color: var(--muted); line-height: 1.4; }
 
     /* Таблица лидеров */
     .lb { display: flex; flex-direction: column; gap: 8px; }
-    .lb-row { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border-radius: 12px; background: var(--item-bg); border: 1px solid var(--border); font-family: 'JetBrains Mono', monospace; font-size: 0.8rem; }
+    .lb-row {
+      display: flex; align-items: center; gap: 10px; padding: 10px 12px;
+      border-radius: 12px; background: var(--item-bg); border: 1px solid var(--border);
+      font-family: 'JetBrains Mono', monospace; font-size: 0.8rem;
+    }
     .lb-row.me { border-color: rgba(0,240,255,0.5); box-shadow: 0 0 15px rgba(0,240,255,0.2); }
     .lb-rank { width: 24px; text-align: center; font-weight: 800; color: var(--muted); flex-shrink: 0; }
     .lb-row:nth-child(1) .lb-rank { color: #f59e0b; }
@@ -57,15 +145,17 @@
 
     @media (max-width: 760px) {
       .game-layout { grid-template-columns: 1fr; }
-      .stage { aspect-ratio: 1 / 1; }
-      .hud-val { font-size: 1.25rem; }
+      .stage { aspect-ratio: 1 / 1; min-height: 380px; }
+      .upgrade-cards { grid-template-columns: 1fr; gap: 10px; }
+      .up-card { flex-direction: row; text-align: left; padding: 10px 14px; gap: 12px; }
+      .up-icon { font-size: 1.6rem; }
     }
   </style>
 </head>
 <body>
   <div class="glow"></div>
   <div class="topbar">
-    <a href="/" class="brand"><div class="brand-logo">🎮</div><div class="brand-title">Never<span>Game</span></div></a>
+    <a href="/" class="brand"><div class="brand-logo">⚔️</div><div class="brand-title">Never<span>Game</span></div></a>
     <div class="nav-links">
       <a href="/projects" class="back-btn">🗂 ПРОЕКТЫ</a>
       <a href="/" class="back-btn">← НА ХАБ</a>
@@ -74,56 +164,81 @@
 
   <div class="wrap">
     <div>
-      <div class="tag">// Мини-игра экосистемы</div>
-      <h1>Never<span>Game</span></h1>
-      <p class="sub">Лови неоновые сферы — чем быстрее, тем больше очков. Не теряй жизни и попади в таблицу рекордов!</p>
+      <div class="tag">// Cyberpunk Roguelike</div>
+      <h1>Cyberpunk <span>Survivors</span></h1>
+      <p class="sub">Выживи против бесконечных волн кибер-дронов! Собирай энергочипы, прокачивай лазеры, клинки и молнии прямо в бою, побеждай мега-боссов и возглавь таблицу лидеров.</p>
     </div>
 
     <div class="game-layout">
-      <div class="stage">
-        <canvas id="cv"></canvas>
+      <div class="stage" id="stage">
+        <!-- Полоса опыта -->
+        <div class="xp-bar-wrap"><div class="xp-bar-fill" id="xpFill"></div></div>
 
+        <!-- HUD во время боя -->
         <div class="hud">
           <div class="hud-block">
             <div class="hud-val" id="hScore">0</div>
             <div class="hud-lbl">Очки</div>
+            <div class="hp-box">
+              <div class="hp-bar"><div class="hp-fill" id="hpFill"></div></div>
+              <span id="hpText" style="font-size:0.65rem;color:#10b981;font-weight:700">100</span>
+            </div>
+          </div>
+          <div class="hud-block hud-center">
+            <div class="hud-val" id="hTime" style="color:#00f0ff">00:00</div>
+            <div class="hud-lbl">Время боя</div>
           </div>
           <div class="hud-block hud-right">
-            <div class="hud-val" id="hLevel">1</div>
+            <div class="hud-val" id="hLvl" style="color:#a855f7">1</div>
             <div class="hud-lbl">Уровень</div>
           </div>
         </div>
-        <div class="combo" id="combo"></div>
-        <div class="lives" id="lives"></div>
+
+        <button class="sound-btn" id="soundBtn" title="Вкл/Выкл звук">🔊 Звук</button>
+
+        <canvas id="cv"></canvas>
 
         <!-- Стартовый экран -->
         <div class="screen" id="startScreen">
-          <h2>Неоновая <span>охота</span></h2>
-          <p>Клик по сфере — <b style="color:#00f0ff">+очки</b>. Сферы со временем ускоряются и уменьшаются. Пропустил 3 — игра окончена.</p>
-          <div class="hint">🖱 КЛИК ИЛИ КАСАНИЕ</div>
-          <button class="pill-btn" id="startBtn">▶ Играть</button>
+          <h2>Cyberpunk <span>Survivors</span></h2>
+          <p>Управляй кибер-агентом, уворачивайся от волн дронов. Оружие стреляет <b>автоматически</b>! Собирай синие кристаллы для прокачки.</p>
+          <div class="controls-hint">
+            <span>💻 <b>WASD / Стрелки</b> — Движение</span>
+            <span>📱 <b>Свайп / Джойстик</b> — На смартфонах</span>
+          </div>
+          <button class="pill-btn" id="startBtn">⚔️ Начать битву</button>
+        </div>
+
+        <!-- Экран выбора апгрейда (Level Up) -->
+        <div class="upgrade-screen hidden" id="upScreen">
+          <div class="upgrade-title">⚡ LEVEL UP! ВЫБЕРИ НАВЫК</div>
+          <div class="upgrade-cards" id="upCards"></div>
         </div>
 
         <!-- Экран конца игры -->
         <div class="screen hidden" id="overScreen">
-          <h2>Игра <span>окончена</span></h2>
+          <h2>Связь <span>разорвана</span></h2>
+          <p>Твой агент пал в бою, но данные сохранены в ядре экосистемы.</p>
           <div class="final-score" id="finalScore">0</div>
-          <input class="name-input" id="nameInput" maxlength="20" placeholder="Твоё имя" autocomplete="off">
+          <div style="font-family:'JetBrains Mono',monospace;font-size:0.8rem;color:var(--muted);margin-top:-6px;">
+            Время выживания: <span id="finalTime" style="color:#00f0ff">00:00</span> | Уровень: <span id="finalLvl" style="color:#a855f7">1</span>
+          </div>
+          <input class="name-input" id="nameInput" maxlength="20" placeholder="Твой никнейм" autocomplete="off">
           <div class="rank-note" id="rankNote"></div>
           <button class="pill-btn" id="saveBtn">💾 Сохранить рекорд</button>
-          <button class="back-btn" id="againBtn" style="background:transparent">↻ Играть снова</button>
+          <button class="back-btn" id="againBtn" style="background:transparent">↻ В бой снова</button>
         </div>
       </div>
 
       <div>
-        <div class="section-title" style="margin-top:0;font-size:1.15rem">🏆 Рекорды</div>
+        <div class="section-title" style="margin-top:0;font-size:1.15rem">🏆 Топ Выживших</div>
         <div class="panel" style="padding:14px">
           <div class="lb" id="lb"><div class="empty">Загрузка...</div></div>
         </div>
       </div>
     </div>
 
-    <div class="foot">NeverGame · EcosystemNever</div>
+    <div class="foot">Cyberpunk Survivors · NeverGame · EcosystemNever</div>
   </div>
 
   <link rel="stylesheet" href="/style.css">
@@ -135,18 +250,103 @@
   const ctx = cv.getContext('2d');
   const $ = (id) => document.getElementById(id);
 
-  const STATE = { MENU: 0, PLAY: 1, OVER: 2 };
-  let state = STATE.MENU;
-  let score = 0, level = 1, lives = 3, combo = 0, comboTimer = 0;
-  let orbs = [], particles = [], spawned = 0, missed = 0, popped = 0;
-  let lastT = 0, spawnAcc = 0, dpr = 1, W = 0, H = 0;
+  // --- Звуки Web Audio API (без внешних файлов) ---
+  let audioCtx = null;
+  let soundEnabled = true;
+  function getAudio() {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    return audioCtx;
+  }
+  function beep(freq, type, duration, endFreq, vol = 0.1) {
+    if (!soundEnabled) return;
+    try {
+      const ac = getAudio();
+      const osc = ac.createOscillator();
+      const gain = ac.createGain();
+      osc.type = type;
+      osc.frequency.setValueAtTime(freq, ac.currentTime);
+      if (endFreq) osc.frequency.exponentialRampToValueAtTime(Math.max(10, endFreq), ac.currentTime + duration);
+      gain.gain.setValueAtTime(vol, ac.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, ac.currentTime + duration);
+      osc.connect(gain);
+      gain.connect(ac.destination);
+      osc.start();
+      osc.stop(ac.currentTime + duration);
+    } catch(e) {}
+  }
+  const sfx = {
+    laser: () => beep(700, 'sawtooth', 0.08, 150, 0.08),
+    slash: () => beep(300, 'triangle', 0.1, 80, 0.12),
+    exp: () => beep(900, 'sine', 0.06, 1400, 0.06),
+    lvl: () => { beep(523, 'triangle', 0.1, null, 0.15); setTimeout(() => beep(659, 'triangle', 0.1, null, 0.15), 100); setTimeout(() => beep(784, 'triangle', 0.2, 1046, 0.18), 200); },
+    hit: () => beep(160, 'square', 0.07, 60, 0.1),
+    boom: () => beep(100, 'sawtooth', 0.25, 20, 0.18)
+  };
 
-  const PALETTE = [
-    { c: '#00f0ff', g: 'rgba(0,240,255,0.9)' },
-    { c: '#a855f7', g: 'rgba(168,85,247,0.9)' },
-    { c: '#10b981', g: 'rgba(16,185,129,0.9)' },
-    { c: '#f59e0b', g: 'rgba(245,158,11,0.9)' }
-  ];
+  $('soundBtn').addEventListener('click', () => {
+    soundEnabled = !soundEnabled;
+    $('soundBtn').textContent = soundEnabled ? '🔊 Звук' : '🔇 Выкл';
+  });
+
+  // --- Игровое состояние ---
+  const STATE = { MENU: 0, PLAY: 1, UPGRADE: 2, OVER: 3 };
+  let state = STATE.MENU;
+  let W = 0, H = 0, dpr = 1, lastT = 0;
+  let gameTime = 0, score = 0, kills = 0;
+
+  // --- Игрок ---
+  const player = {
+    x: 0, y: 0, r: 14,
+    hp: 100, maxHp: 100,
+    speed: 190,
+    xp: 0, nextXp: 15, lvl: 1,
+    magnetRadius: 110,
+    regen: 0.5,
+    // Снаряжение
+    blaster: { lvl: 1, timer: 0, interval: 0.55, count: 1, dmg: 22, speed: 450 },
+    orbit: { lvl: 1, angle: 0, count: 2, radius: 55, speed: 3.5, dmg: 18 },
+    lightning: { lvl: 0, timer: 0, interval: 2.2, chains: 2, dmg: 40 },
+    pulse: { lvl: 0, timer: 0, interval: 3.5, radius: 130, dmg: 35 }
+  };
+
+  let enemies = [];
+  let projectiles = [];
+  let gems = [];
+  let particles = [];
+  let popups = [];
+  let shockWaves = [];
+
+  // Управление
+  const keys = { w: false, a: false, s: false, d: false, ArrowUp: false, ArrowLeft: false, ArrowDown: false, ArrowRight: false };
+  let touchActive = false;
+  let touchStart = { x: 0, y: 0 };
+  let touchCurr = { x: 0, y: 0 };
+
+  window.addEventListener('keydown', (e) => {
+    if (keys.hasOwnProperty(e.key)) { keys[e.key] = true; }
+    if (['ArrowUp','ArrowDown','ArrowLeft','ArrowRight',' '].includes(e.key)) e.preventDefault();
+  });
+  window.addEventListener('keyup', (e) => {
+    if (keys.hasOwnProperty(e.key)) { keys[e.key] = false; }
+  });
+
+  // Сенсорное управление (Virtual Joystick)
+  const stage = $('stage');
+  stage.addEventListener('pointerdown', (e) => {
+    if (state !== STATE.PLAY) return;
+    const rect = cv.getBoundingClientRect();
+    touchActive = true;
+    touchStart = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+    touchCurr = { ...touchStart };
+  });
+  window.addEventListener('pointermove', (e) => {
+    if (!touchActive) return;
+    const rect = cv.getBoundingClientRect();
+    touchCurr = { x: e.clientX - rect.left, y: e.clientY - rect.top };
+  });
+  window.addEventListener('pointerup', () => { touchActive = false; });
+  window.addEventListener('pointercancel', () => { touchActive = false; });
 
   function resize() {
     dpr = window.devicePixelRatio || 1;
@@ -154,233 +354,632 @@
     cv.width = W * dpr; cv.height = H * dpr;
     ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
   }
-  window.addEventListener('resize', () => { resize(); });
+  window.addEventListener('resize', resize);
 
-  // ---------- Игровая логика ----------
-  function reset() {
-    score = 0; level = 1; lives = 3; combo = 0; comboTimer = 0;
-    orbs = []; particles = []; spawned = 0; missed = 0; popped = 0;
-    spawnAcc = 0; updateHud();
+  // --- Сброс / Инициализация игры ---
+  function resetGame() {
+    resize();
+    player.x = W / 2;
+    player.y = H / 2;
+    player.hp = 100;
+    player.maxHp = 100;
+    player.speed = 190;
+    player.xp = 0;
+    player.nextXp = 15;
+    player.lvl = 1;
+    player.regen = 0.5;
+    player.magnetRadius = 110;
+
+    player.blaster = { lvl: 1, timer: 0, interval: 0.55, count: 1, dmg: 22, speed: 450 };
+    player.orbit = { lvl: 1, angle: 0, count: 2, radius: 55, speed: 3.5, dmg: 18 };
+    player.lightning = { lvl: 0, timer: 0, interval: 2.2, chains: 2, dmg: 40 };
+    player.pulse = { lvl: 0, timer: 0, interval: 3.5, radius: 130, dmg: 35 };
+
+    enemies = [];
+    projectiles = [];
+    gems = [];
+    particles = [];
+    popups = [];
+    shockWaves = [];
+    gameTime = 0;
+    score = 0;
+    kills = 0;
+
+    updateUI();
   }
 
-  function updateHud() {
+  function updateUI() {
     $('hScore').textContent = score;
-    $('hLevel').textContent = level;
-    const lv = $('lives');
-    lv.innerHTML = '';
-    for (let i = 0; i < 3; i++) {
-      const d = document.createElement('div');
-      d.className = 'life' + (i < lives ? '' : ' off');
-      lv.appendChild(d);
+    $('hLvl').textContent = player.lvl;
+    const hpPct = Math.max(0, Math.min(100, (player.hp / player.maxHp) * 100));
+    $('hpFill').style.width = hpPct + '%';
+    $('hpText').textContent = Math.ceil(player.hp);
+    const xpPct = Math.max(0, Math.min(100, (player.xp / player.nextXp) * 100));
+    $('xpFill').style.width = xpPct + '%';
+
+    const min = String(Math.floor(gameTime / 60)).padStart(2, '0');
+    const sec = String(Math.floor(gameTime % 60)).padStart(2, '0');
+    $('hTime').textContent = min + ':' + sec;
+  }
+
+  // --- Спавн врагов ---
+  let spawnTimer = 0;
+  function spawnEnemies(dt) {
+    spawnTimer += dt;
+    const rate = Math.max(0.18, 1.1 - (gameTime / 90) * 0.7);
+    if (spawnTimer >= rate) {
+      spawnTimer = 0;
+      // Спавн за границами экрана
+      const side = Math.floor(Math.random() * 4);
+      let x, y;
+      const pad = 30;
+      if (side === 0) { x = Math.random() * W; y = -pad; }
+      else if (side === 1) { x = W + pad; y = Math.random() * H; }
+      else if (side === 2) { x = Math.random() * W; y = H + pad; }
+      else { x = -pad; y = Math.random() * H; }
+
+      // Типы врагов
+      const isBossWave = gameTime > 45 && Math.floor(gameTime) % 60 === 0 && !enemies.some(e => e.boss);
+      if (isBossWave) {
+        enemies.push({
+          x, y, r: 28, hp: 350 + gameTime * 5, maxHp: 350 + gameTime * 5,
+          speed: 70, dmg: 25, color: '#f43f5e', xp: 40, boss: true, name: 'CYBER-TITAN'
+        });
+        showPopup(W/2, H/3, '⚠ BOSS INCOMING! ⚠', '#f43f5e', 24);
+        sfx.boom();
+        return;
+      }
+
+      const roll = Math.random();
+      if (roll < 0.65) {
+        // Обычный кибер-дрон (быстрый, слабый)
+        enemies.push({ x, y, r: 10, hp: 20 + gameTime * 0.6, maxHp: 20 + gameTime * 0.6, speed: 110 + Math.random() * 25, dmg: 10, color: '#00f0ff', xp: 3 });
+      } else if (roll < 0.9) {
+        // Танк (медленный, бронированный)
+        enemies.push({ x, y, r: 16, hp: 55 + gameTime * 1.2, maxHp: 55 + gameTime * 1.2, speed: 75, dmg: 18, color: '#a855f7', xp: 7 });
+      } else {
+        // Глитч-охотник (сверхбыстрый)
+        enemies.push({ x, y, r: 11, hp: 28 + gameTime * 0.8, maxHp: 28 + gameTime * 0.8, speed: 155, dmg: 14, color: '#f59e0b', xp: 5 });
+      }
     }
   }
 
-  function spawn() {
-    const r = 16 + Math.random() * 26 - Math.min(8, level * 0.6);
-    const rad = Math.max(9, r);
-    // скорость: пиксели в секунду — сфера пересекает экран за ~4-7 сек
-    const speed = (H / (4.5 + Math.random() * 2.5)) * (1 + level * 0.05);
-    const life = 2400 + Math.random() * 1400 - Math.min(800, level * 50);
-    const p = PALETTE[Math.floor(Math.random() * PALETTE.length)];
-    const x = rad + 10 + Math.random() * (W - rad * 2 - 20);
-    const y = H + rad;
-    // «золотая» сфера — реже, даёт бонус
-    const bonus = Math.random() < 0.12;
-    orbs.push({ x, y, r: rad, vy: -speed, life, maxLife: Math.max(1200, life), p: bonus ? PALETTE[3] : p, bonus, born: performance.now(), grow: 0 });
-  }
-
-  function burst(x, y, color) {
-    for (let i = 0; i < 14; i++) {
+  function addParticle(x, y, color, count = 8, speed = 2.5) {
+    for (let i = 0; i < count; i++) {
       const a = Math.random() * Math.PI * 2;
-      const s = 1 + Math.random() * 4;
-      particles.push({ x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s, life: 1, color });
+      const s = (0.5 + Math.random()) * speed;
+      particles.push({
+        x, y, vx: Math.cos(a) * s, vy: Math.sin(a) * s,
+        life: 1, color, size: 2 + Math.random() * 2
+      });
     }
   }
 
-  function pop(orb, idx) {
-    const base = orb.bonus ? 30 : Math.round(10 + orb.r / 3);
-    combo++;
-    comboTimer = 1.2;
-    const mult = 1 + Math.floor(combo / 5) * 0.5;
-    const gained = Math.round(base * mult);
-    score += gained;
-    popped++;
-    burst(orb.x, orb.y, orb.p.c);
-    orbs.splice(idx, 1);
-    if (combo >= 5) {
-      $('combo').textContent = 'COMBO ×' + (1 + Math.floor(combo / 5) * 0.5).toFixed(1);
-      $('combo').style.opacity = '1';
+  function showPopup(x, y, text, color = '#fff', size = 14) {
+    popups.push({ x, y, text, color, life: 1, size });
+  }
+
+  // --- Автоматические атаки ---
+  function updateWeapons(dt) {
+    // 1. Плазменный бластер (стреляет в ближайших врагов)
+    if (player.blaster.lvl > 0 && enemies.length > 0) {
+      player.blaster.timer += dt;
+      if (player.blaster.timer >= player.blaster.interval) {
+        player.blaster.timer = 0;
+        // Сортируем врагов по дистанции
+        const targets = [...enemies].sort((a,b) => Math.hypot(a.x - player.x, a.y - player.y) - Math.hypot(b.x - player.x, b.y - player.y));
+        const count = Math.min(player.blaster.count, targets.length);
+        for (let i = 0; i < count; i++) {
+          const t = targets[i];
+          const a = Math.atan2(t.y - player.y, t.x - player.x);
+          projectiles.push({
+            x: player.x, y: player.y,
+            vx: Math.cos(a) * player.blaster.speed,
+            vy: Math.sin(a) * player.blaster.speed,
+            r: 4, dmg: player.blaster.dmg, life: 1.5, color: '#00f0ff'
+          });
+        }
+        sfx.laser();
+      }
     }
-    // уровень каждые 8 попаданий
-    const newLevel = 1 + Math.floor(popped / 8);
-    if (newLevel > level) { level = newLevel; }
-    updateHud();
+
+    // 2. Орбитальные клинки (кружатся вокруг)
+    if (player.orbit.lvl > 0) {
+      player.orbit.angle += player.orbit.speed * dt;
+      const count = player.orbit.count;
+      for (let i = 0; i < count; i++) {
+        const ang = player.orbit.angle + (i * Math.PI * 2 / count);
+        const bx = player.x + Math.cos(ang) * player.orbit.radius;
+        const by = player.y + Math.sin(ang) * player.orbit.radius;
+        // Проверка столкновения клинка с врагами
+        for (const e of enemies) {
+          if (Math.hypot(e.x - bx, e.y - by) < e.r + 9) {
+            damageEnemy(e, player.orbit.dmg * dt * 3.5, false);
+            addParticle(bx, by, '#a855f7', 1, 1.5);
+          }
+        }
+      }
+    }
+
+    // 3. Цепная молния
+    if (player.lightning.lvl > 0 && enemies.length > 0) {
+      player.lightning.timer += dt;
+      if (player.lightning.timer >= player.lightning.interval) {
+        player.lightning.timer = 0;
+        const sorted = [...enemies].sort((a,b) => Math.hypot(a.x - player.x, a.y - player.y) - Math.hypot(b.x - player.x, b.y - player.y));
+        const first = sorted[0];
+        if (first && Math.hypot(first.x - player.x, first.y - player.y) < 320) {
+          shockEnemy(first, player.lightning.chains, [first]);
+          sfx.slash();
+        }
+      }
+    }
+
+    // 4. Импульсная волна (EMP Pulse)
+    if (player.pulse.lvl > 0) {
+      player.pulse.timer += dt;
+      if (player.pulse.timer >= player.pulse.interval) {
+        player.pulse.timer = 0;
+        shockWaves.push({ x: player.x, y: player.y, r: 10, maxR: player.pulse.radius, life: 1 });
+        sfx.boom();
+        for (const e of enemies) {
+          const d = Math.hypot(e.x - player.x, e.y - player.y);
+          if (d <= player.pulse.radius) {
+            damageEnemy(e, player.pulse.dmg);
+            // Отталкивание
+            const a = Math.atan2(e.y - player.y, e.x - player.x);
+            e.x += Math.cos(a) * 45;
+            e.y += Math.sin(a) * 45;
+          }
+        }
+      }
+    }
   }
 
-  function loseLife() {
-    lives--;
-    combo = 0;
-    updateHud();
-    if (lives <= 0) gameOver();
+  function shockEnemy(target, remaining, hitList) {
+    damageEnemy(target, player.lightning.dmg);
+    addParticle(target.x, target.y, '#f59e0b', 8, 3);
+    if (remaining <= 1) return;
+    const next = enemies.find(e => !hitList.includes(e) && Math.hypot(e.x - target.x, e.y - target.y) < 180);
+    if (next) {
+      hitList.push(next);
+      // Линия молнии
+      particles.push({
+        x: target.x, y: target.y, tx: next.x, ty: next.y,
+        life: 0.15, color: '#f59e0b', isBolt: true
+      });
+      shockEnemy(next, remaining - 1, hitList);
+    }
   }
 
+  function damageEnemy(e, dmg, showNum = true) {
+    e.hp -= dmg;
+    if (showNum && Math.random() < 0.6) {
+      showPopup(e.x + (Math.random() - 0.5) * 14, e.y - 10, Math.round(dmg), '#fff', 12);
+    }
+    if (e.hp <= 0 && !e.dead) {
+      e.dead = true;
+      kills++;
+      score += e.boss ? 500 : 25;
+      gems.push({ x: e.x, y: e.y, xp: e.xp, r: e.boss ? 9 : 5, color: e.boss ? '#f59e0b' : '#00f0ff' });
+      addParticle(e.x, e.y, e.color, e.boss ? 30 : 12, e.boss ? 5 : 3);
+      if (e.boss) {
+        showPopup(e.x, e.y - 20, '+500 BOSS DOWN!', '#f59e0b', 18);
+        sfx.boom();
+      } else {
+        sfx.hit();
+      }
+    }
+  }
+
+  // --- Прокачка / Level Up ---
+  const ALL_UPGRADES = [
+    { id: 'blaster_spd', name: 'Лазерный разгон', icon: '🔫', desc: 'Скорострельность бластера +25%', apply: () => { player.blaster.interval *= 0.78; } },
+    { id: 'blaster_cnt', name: 'Мульти-выстрел', icon: '💥', desc: '+1 дополнительный лазерный луч', apply: () => { player.blaster.count += 1; } },
+    { id: 'orbit_blade', name: 'Орбитальный клинок', icon: '⚔️', desc: '+1 вращающийся плазменный клинок', apply: () => { player.orbit.count += 1; player.orbit.lvl++; } },
+    { id: 'orbit_dmg', name: 'Заточка клинков', icon: '✨', desc: 'Урон и радиус орбитальных клинков +30%', apply: () => { player.orbit.dmg *= 1.3; player.orbit.radius += 10; } },
+    { id: 'lightning', name: 'Цепная молния', icon: '⚡', desc: 'Разряды молнии бьют по группам врагов', apply: () => { player.lightning.lvl++; player.lightning.chains += 1; } },
+    { id: 'pulse', name: 'EMP-Импульс', icon: '🌊', desc: 'Взрывная волна отталкивает и глушит врагов', apply: () => { player.pulse.lvl++; player.pulse.radius += 20; } },
+    { id: 'speed', name: 'Кибер-импланты ног', icon: '👟', desc: 'Скорость бега героя +18%', apply: () => { player.speed *= 1.18; } },
+    { id: 'armor', name: 'Нано-броня', icon: '🛡️', desc: '+30 к максимальному здоровью и полный хил', apply: () => { player.maxHp += 30; player.hp = player.maxHp; } },
+    { id: 'magnet', name: 'Магнитный захват', icon: '🧲', desc: 'Радиус притягивания кристаллов +50%', apply: () => { player.magnetRadius *= 1.5; } }
+  ];
+
+  function showLevelUpMenu() {
+    state = STATE.UPGRADE;
+    sfx.lvl();
+    const upCards = $('upCards');
+    upCards.innerHTML = '';
+    // Выбираем 3 случайных уникальных апгрейда
+    const pool = [...ALL_UPGRADES].sort(() => Math.random() - 0.5).slice(0, 3);
+    pool.forEach(up => {
+      const card = document.createElement('div');
+      card.className = 'up-card';
+      card.innerHTML = `
+        <div class="up-icon">${up.icon}</div>
+        <div>
+          <div class="up-name">${up.name}</div>
+          <div class="up-desc">${up.desc}</div>
+        </div>
+      `;
+      card.onclick = () => {
+        up.apply();
+        $('upScreen').classList.add('hidden');
+        state = STATE.PLAY;
+        lastT = performance.now();
+      };
+      upCards.appendChild(card);
+    });
+    $('upScreen').classList.remove('hidden');
+  }
+
+  function addXp(amount) {
+    player.xp += amount;
+    score += amount * 2;
+    if (player.xp >= player.nextXp) {
+      player.xp -= player.nextXp;
+      player.lvl++;
+      player.nextXp = Math.round(player.nextXp * 1.35 + 8);
+      showLevelUpMenu();
+    }
+    updateUI();
+  }
+
+  // --- Основной цикл обновления ---
+  function update(dt) {
+    gameTime += dt;
+    score += Math.round(dt * 5); // пассивные очки за выживание
+
+    // Регенерация здоровья
+    if (player.hp < player.maxHp) {
+      player.hp = Math.min(player.maxHp, player.hp + player.regen * dt);
+    }
+
+    // Движение игрока
+    let mx = 0, my = 0;
+    if (keys.w || keys.ArrowUp) my -= 1;
+    if (keys.s || keys.ArrowDown) my += 1;
+    if (keys.a || keys.ArrowLeft) mx -= 1;
+    if (keys.d || keys.ArrowRight) mx += 1;
+
+    // Джойстик на мобилках
+    if (touchActive) {
+      const dx = touchCurr.x - touchStart.x;
+      const dy = touchCurr.y - touchStart.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist > 8) {
+        mx = dx / dist;
+        my = dy / dist;
+      }
+    }
+
+    const len = Math.hypot(mx, my);
+    if (len > 0) {
+      player.x += (mx / len) * player.speed * dt;
+      player.y += (my / len) * player.speed * dt;
+      // Ограничение экраном
+      player.x = Math.max(player.r, Math.min(W - player.r, player.x));
+      player.y = Math.max(player.r, Math.min(H - player.r, player.y));
+    }
+
+    // Оружие
+    updateWeapons(dt);
+
+    // Снаряды
+    for (let i = projectiles.length - 1; i >= 0; i--) {
+      const p = projectiles[i];
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.life -= dt;
+      // Столкновение со врагами
+      for (const e of enemies) {
+        if (Math.hypot(e.x - p.x, e.y - p.y) < e.r + p.r) {
+          damageEnemy(e, p.dmg);
+          addParticle(p.x, p.y, p.color, 4, 1.5);
+          p.life = 0;
+          break;
+        }
+      }
+      if (p.life <= 0 || p.x < -20 || p.x > W + 20 || p.y < -20 || p.y > H + 20) {
+        projectiles.splice(i, 1);
+      }
+    }
+
+    // Враги
+    spawnEnemies(dt);
+    for (let i = enemies.length - 1; i >= 0; i--) {
+      const e = enemies[i];
+      if (e.dead) { enemies.splice(i, 1); continue; }
+      const a = Math.atan2(player.y - e.y, player.x - e.x);
+      e.x += Math.cos(a) * e.speed * dt;
+      e.y += Math.sin(a) * e.speed * dt;
+
+      // Урон игроку при контакте
+      const dist = Math.hypot(player.x - e.x, player.y - e.y);
+      if (dist < player.r + e.r) {
+        player.hp -= e.dmg * dt * 2.2;
+        addParticle(player.x, player.y, '#ef4444', 2, 2);
+        if (Math.random() < 0.15) sfx.hit();
+        if (player.hp <= 0) {
+          gameOver();
+          return;
+        }
+      }
+    }
+
+    // Кристаллы опыта (Gems)
+    for (let i = gems.length - 1; i >= 0; i--) {
+      const g = gems[i];
+      const dist = Math.hypot(player.x - g.x, player.y - g.y);
+      if (dist < player.magnetRadius) {
+        // Притягивание к игроку
+        const a = Math.atan2(player.y - g.y, player.x - g.x);
+        const spd = 320 * (1 - dist / player.magnetRadius) + 120;
+        g.x += Math.cos(a) * spd * dt;
+        g.y += Math.sin(a) * spd * dt;
+      }
+      if (dist < player.r + g.r) {
+        addXp(g.xp);
+        sfx.exp();
+        addParticle(g.x, g.y, g.color, 4, 1.2);
+        gems.splice(i, 1);
+      }
+    }
+
+    // Взрывные волны
+    for (let i = shockWaves.length - 1; i >= 0; i--) {
+      const sw = shockWaves[i];
+      sw.r += (sw.maxR - sw.r) * 12 * dt;
+      sw.life -= dt * 2.5;
+      if (sw.life <= 0) shockWaves.splice(i, 1);
+    }
+
+    // Частицы
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const p = particles[i];
+      if (p.isBolt) {
+        p.life -= dt * 4;
+      } else {
+        p.x += p.vx; p.y += p.vy;
+        p.life -= dt * 2;
+      }
+      if (p.life <= 0) particles.splice(i, 1);
+    }
+
+    // Всплывающие надписи
+    for (let i = popups.length - 1; i >= 0; i--) {
+      const pop = popups[i];
+      pop.y -= 25 * dt;
+      pop.life -= dt * 1.5;
+      if (pop.life <= 0) popups.splice(i, 1);
+    }
+
+    updateUI();
+  }
+
+  // --- Отрисовка ---
+  function draw() {
+    ctx.clearRect(0, 0, W, H);
+
+    // Кибер-сетка фона
+    ctx.strokeStyle = 'rgba(0, 240, 255, 0.04)';
+    ctx.lineWidth = 1;
+    const gridSize = 40;
+    for (let x = 0; x < W; x += gridSize) {
+      ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke();
+    }
+    for (let y = 0; y < H; y += gridSize) {
+      ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke();
+    }
+
+    // Ударные волны (EMP Pulse)
+    for (const sw of shockWaves) {
+      ctx.save();
+      ctx.strokeStyle = `rgba(0, 240, 255, ${sw.life * 0.8})`;
+      ctx.lineWidth = 3;
+      ctx.beginPath(); ctx.arc(sw.x, sw.y, sw.r, 0, Math.PI * 2); ctx.stroke();
+      ctx.restore();
+    }
+
+    // Кристаллы опыта
+    for (const g of gems) {
+      ctx.save();
+      ctx.fillStyle = g.color;
+      ctx.shadowColor = g.color; ctx.shadowBlur = 8;
+      ctx.beginPath();
+      ctx.moveTo(g.x, g.y - g.r);
+      ctx.lineTo(g.x + g.r, g.y);
+      ctx.lineTo(g.x, g.y + g.r);
+      ctx.lineTo(g.x - g.r, g.y);
+      ctx.closePath();
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Враги
+    for (const e of enemies) {
+      ctx.save();
+      ctx.fillStyle = e.color;
+      ctx.shadowColor = e.color; ctx.shadowBlur = e.boss ? 18 : 10;
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, e.r, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Глаз / ядро дрона
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(e.x, e.y, e.r * 0.35, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Шкала здоровья для босса или раненых
+      if (e.hp < e.maxHp || e.boss) {
+        const bw = e.r * 2.2;
+        const bh = e.boss ? 5 : 3;
+        ctx.fillStyle = 'rgba(0,0,0,0.6)';
+        ctx.fillRect(e.x - bw/2, e.y - e.r - 8, bw, bh);
+        ctx.fillStyle = e.boss ? '#f43f5e' : '#22c55e';
+        ctx.fillRect(e.x - bw/2, e.y - e.r - 8, bw * Math.max(0, e.hp / e.maxHp), bh);
+      }
+      ctx.restore();
+    }
+
+    // Орбитальные клинки
+    if (player.orbit.lvl > 0 && state !== STATE.MENU) {
+      const count = player.orbit.count;
+      for (let i = 0; i < count; i++) {
+        const ang = player.orbit.angle + (i * Math.PI * 2 / count);
+        const bx = player.x + Math.cos(ang) * player.orbit.radius;
+        const by = player.y + Math.sin(ang) * player.orbit.radius;
+        ctx.save();
+        ctx.fillStyle = '#a855f7';
+        ctx.shadowColor = '#a855f7'; ctx.shadowBlur = 14;
+        ctx.beginPath();
+        ctx.arc(bx, by, 6, 0, Math.PI * 2);
+        ctx.fill();
+        // Шлейф клинка
+        ctx.strokeStyle = 'rgba(168, 85, 247, 0.4)';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(player.x, player.y, player.orbit.radius, ang - 0.35, ang);
+        ctx.stroke();
+        ctx.restore();
+      }
+    }
+
+    // Снаряды
+    for (const p of projectiles) {
+      ctx.save();
+      ctx.fillStyle = p.color;
+      ctx.shadowColor = p.color; ctx.shadowBlur = 12;
+      ctx.beginPath();
+      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.restore();
+    }
+
+    // Игрок
+    if (state !== STATE.MENU) {
+      ctx.save();
+      // Аура героя
+      ctx.fillStyle = '#00f0ff';
+      ctx.shadowColor = '#00f0ff'; ctx.shadowBlur = 16;
+      ctx.beginPath();
+      ctx.arc(player.x, player.y, player.r, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Внутреннее кибер-ядро
+      ctx.fillStyle = '#fff';
+      ctx.beginPath();
+      ctx.arc(player.x, player.y, player.r * 0.45, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Радиус магнита (полупрозрачный ореол)
+      ctx.strokeStyle = 'rgba(0, 240, 255, 0.05)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.arc(player.x, player.y, player.magnetRadius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    // Частицы
+    for (const p of particles) {
+      ctx.save();
+      if (p.isBolt) {
+        ctx.strokeStyle = p.color; ctx.lineWidth = 2;
+        ctx.beginPath(); ctx.moveTo(p.x, p.y); ctx.lineTo(p.tx, p.ty); ctx.stroke();
+      } else {
+        ctx.globalAlpha = Math.max(0, p.life);
+        ctx.fillStyle = p.color;
+        ctx.beginPath(); ctx.arc(p.x, p.y, p.size * p.life, 0, Math.PI * 2); ctx.fill();
+      }
+      ctx.restore();
+    }
+
+    // Виртуальный джойстик на мобилках
+    if (touchActive) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(0, 240, 255, 0.4)';
+      ctx.lineWidth = 2;
+      ctx.beginPath(); ctx.arc(touchStart.x, touchStart.y, 35, 0, Math.PI * 2); ctx.stroke();
+      ctx.fillStyle = 'rgba(0, 240, 255, 0.6)';
+      ctx.beginPath(); ctx.arc(touchCurr.x, touchCurr.y, 16, 0, Math.PI * 2); ctx.fill();
+      ctx.restore();
+    }
+
+    // Всплывающий текст урона / оповещений
+    for (const pop of popups) {
+      ctx.save();
+      ctx.globalAlpha = Math.max(0, pop.life);
+      ctx.fillStyle = pop.color;
+      ctx.font = `800 ${pop.size}px 'Syne', sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.fillText(pop.text, pop.x, pop.y);
+      ctx.restore();
+    }
+  }
+
+  function loop(t) {
+    const dt = Math.min(0.05, (t - lastT) / 1000 || 0);
+    lastT = t;
+    if (state === STATE.PLAY) {
+      update(dt);
+    }
+    draw();
+    requestAnimationFrame(loop);
+  }
+
+  // --- Завершение игры ---
   function gameOver() {
     state = STATE.OVER;
+    sfx.boom();
+    const min = String(Math.floor(gameTime / 60)).padStart(2, '0');
+    const sec = String(Math.floor(gameTime % 60)).padStart(2, '0');
     $('finalScore').textContent = score;
+    $('finalTime').textContent = min + ':' + sec;
+    $('finalLvl').textContent = player.lvl;
     $('rankNote').textContent = '';
     $('nameInput').value = localStorage.getItem('nn_game_name') || '';
     $('overScreen').classList.remove('hidden');
   }
 
-  function update(dt, now) {
-    // спавн
-    const interval = Math.max(0.35, 1.05 - level * 0.05);
-    spawnAcc += dt;
-    while (spawnAcc >= interval && spawned < 400) {
-      spawnAcc -= interval;
-      spawn();
-      spawned++;
-    }
-
-    // движение сфер
-    for (let i = orbs.length - 1; i >= 0; i--) {
-      const o = orbs[i];
-      o.y += o.vy * dt;
-      o.grow = Math.min(1, o.grow + dt * 4);
-      const age = now - o.born;
-      if (o.y + o.r < 0) {
-        // улетела за верх — пропуск, минус жизнь
-        orbs.splice(i, 1);
-        missed++;
-        loseLife();
-      } else if (age > o.maxLife) {
-        // исчезла по времени — без штрафа
-        orbs.splice(i, 1);
-      }
-    }
-
-    // частицы
-    for (let i = particles.length - 1; i >= 0; i--) {
-      const p = particles[i];
-      p.x += p.vx * dt * 60; p.y += p.vy * dt * 60;
-      p.vy += 0.15 * dt * 60;
-      p.life -= dt * 1.6;
-      if (p.life <= 0) particles.splice(i, 1);
-    }
-
-    // комбо-таймер
-    if (comboTimer > 0) {
-      comboTimer -= dt;
-      if (comboTimer <= 0) { combo = 0; $('combo').style.opacity = '0'; }
-    }
-  }
-
-  function draw(now) {
-    ctx.clearRect(0, 0, W, H);
-
-    // фоновая сетка
-    ctx.strokeStyle = 'rgba(255,255,255,0.03)';
-    ctx.lineWidth = 1;
-    for (let x = 0; x < W; x += 40) { ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
-    for (let y = 0; y < H; y += 40) { ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
-
-    // сферы
-    for (const o of orbs) {
-      const lifeRatio = Math.max(0, 1 - (now - o.born) / o.maxLife);
-      const alpha = 0.35 + 0.65 * lifeRatio;
-      const rr = o.r * o.grow;
-      ctx.save();
-      ctx.globalAlpha = alpha;
-      // свечение
-      const grd = ctx.createRadialGradient(o.x, o.y, 0, o.x, o.y, rr * 2.2);
-      grd.addColorStop(0, o.p.g);
-      grd.addColorStop(0.5, o.p.c + '55');
-      grd.addColorStop(1, 'transparent');
-      ctx.fillStyle = grd;
-      ctx.beginPath(); ctx.arc(o.x, o.y, rr * 2.2, 0, Math.PI * 2); ctx.fill();
-      // ядро
-      ctx.fillStyle = o.p.c;
-      ctx.shadowColor = o.p.c; ctx.shadowBlur = 18;
-      ctx.beginPath(); ctx.arc(o.x, o.y, rr, 0, Math.PI * 2); ctx.fill();
-      ctx.shadowBlur = 0;
-      // точка
-      ctx.fillStyle = 'rgba(255,255,255,0.85)';
-      ctx.beginPath(); ctx.arc(o.x - rr * 0.3, o.y - rr * 0.3, rr * 0.22, 0, Math.PI * 2); ctx.fill();
-      // индикатор времени (кольцо)
-      ctx.globalAlpha = 0.5;
-      ctx.strokeStyle = o.p.c; ctx.lineWidth = 2;
-      ctx.beginPath(); ctx.arc(o.x, o.y, rr + 4, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * lifeRatio); ctx.stroke();
-      ctx.restore();
-    }
-
-    // частицы
-    for (const p of particles) {
-      ctx.globalAlpha = Math.max(0, p.life);
-      ctx.fillStyle = p.color;
-      ctx.beginPath(); ctx.arc(p.x, p.y, 3 * p.life, 0, Math.PI * 2); ctx.fill();
-    }
-    ctx.globalAlpha = 1;
-  }
-
-  function loop(t) {
-    const now = t;
-    const dt = Math.min(0.05, (t - lastT) / 1000 || 0);
-    lastT = t;
-    if (state === STATE.PLAY) update(dt, now);
-    draw(now);
-    requestAnimationFrame(loop);
-  }
-
-  // ---------- Ввод ----------
-  function hit(cx, cy) {
-    if (state !== STATE.PLAY) return;
-    for (let i = orbs.length - 1; i >= 0; i--) {
-      const o = orbs[i];
-      const dd = Math.hypot(cx - o.x, cy - o.y);
-      if (dd <= o.r + 6) { pop(o, i); return; }
-    }
-  }
-  function coords(e) {
-    const r = cv.getBoundingClientRect();
-    const t = e.touches ? e.touches[0] : e;
-    return { x: t.clientX - r.left, y: t.clientY - r.top };
-  }
-  cv.addEventListener('pointerdown', (e) => { e.preventDefault(); const c = coords(e); hit(c.x, c.y); });
-
-  // ---------- Управление экранами ----------
   function startGame() {
-    resize(); reset();
+    resetGame();
     $('startScreen').classList.add('hidden');
     $('overScreen').classList.add('hidden');
+    $('upScreen').classList.add('hidden');
     state = STATE.PLAY;
     lastT = performance.now();
   }
+
   $('startBtn').addEventListener('click', startGame);
   $('againBtn').addEventListener('click', startGame);
 
+  // Сохранение рекорда на сервер
   $('saveBtn').addEventListener('click', async () => {
-    const name = ($('nameInput').value || 'Гость').trim().slice(0, 20) || 'Гость';
+    const name = ($('nameInput').value || 'Кибер-Герой').trim().slice(0, 20) || 'Кибер-Герой';
     localStorage.setItem('nn_game_name', name);
     $('saveBtn').disabled = true;
     try {
       const r = await fetch('/api/game/score', {
         method: 'POST', headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ name, score, level })
+        body: JSON.stringify({ name, score, level: player.lvl })
       });
       const d = await r.json();
       $('rankNote').textContent = '✔ Рекорд сохранён! Твоё место: #' + d.rank;
       loadScores(d.id);
     } catch (e) {
-      $('rankNote').textContent = '⚠ Не удалось сохранить (сервер офлайн)';
+      $('rankNote').textContent = '⚠ Ошибка сохранения рекорда';
       $('saveBtn').disabled = false;
     }
   });
 
+  // Загрузка таблицы лидеров
   async function loadScores(meId) {
     try {
       const rows = await (await fetch('/api/game/scores')).json();
       const lb = $('lb');
-      if (!rows.length) { lb.innerHTML = '<div class="empty">Пока нет рекордов — будь первым!</div>'; return; }
+      if (!rows.length) { lb.innerHTML = '<div class="empty">Пока нет рекордов — стань первым!</div>'; return; }
       lb.innerHTML = '';
       rows.forEach((r, i) => {
         const d = document.createElement('div');
@@ -393,11 +992,11 @@
         lb.appendChild(d);
       });
     } catch (e) {
-      $('lb').innerHTML = '<div class="empty">⚠ Сервер офлайн</div>';
+      $('lb').innerHTML = '<div class="empty">⚠ Таблица лидеров офлайн</div>';
     }
   }
 
-  // ---------- Старт ----------
+  // Старт
   resize();
   loadScores();
   requestAnimationFrame(loop);
